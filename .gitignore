@@ -1,0 +1,7 @@
+*.o
+*.so
+*.pkg.tar.*
+src/
+pkg/
+config.h
+lem
