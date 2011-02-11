@@ -38,6 +38,7 @@ sleeper_wakeup(lua_State *T)
 	ev_timer_stop(EV_G_ w);
 
 	nargs = lua_gettop(T) - 1;
+	lua_settop(S, 0);
 	lua_xmove(T, S, nargs);
 	lem_queue(S, nargs);
 	w->data = NULL;
@@ -54,8 +55,8 @@ sleep_handler(EV_P_ struct ev_timer *w, int revents)
 
 	(void)revents;
 
-	lua_pushboolean(T, 1);
-	lem_queue(T, 1);
+	/* return nil, "timeout" */
+	lem_queue(T, 2);
 	w->data = NULL;
 }
 
@@ -76,10 +77,13 @@ sleeper_sleep(lua_State *T)
 		ev_tstamp delay = (ev_tstamp)luaL_checknumber(T, 2);
 
 		if (delay <= 0) {
-			lua_pushboolean(T, 1);
-			lem_queue(T, 1);
+			/* return nil, "timeout"
+			 * ..but yield the thread */
+			lua_pushnil(T);
+			lua_pushvalue(T, lua_upvalueindex(1));
+			lem_queue(T, 2);
 
-			return lua_yield(T, 1);
+			return lua_yield(T, 2);
 		}
 
 		ev_timer_set(w, delay, 0);
@@ -87,8 +91,12 @@ sleeper_sleep(lua_State *T)
 	}
 
 	w->data = T;
+
+	/* yield sleeper, nil, "timeout" */
 	lua_settop(T, 1);
-	return lua_yield(T, 1);
+	lua_pushnil(T);
+	lua_pushvalue(T, lua_upvalueindex(1));
+	return lua_yield(T, 3);
 }
 
 static int
@@ -230,7 +238,8 @@ int luaopen_lem_utils(lua_State *L)
 	lua_pushcfunction(L, sleeper_wakeup);
 	lua_setfield(L, -2, "wakeup");
 	/* mt.sleep = <sleeper_sleep> */
-	lua_pushcfunction(L, sleeper_sleep);
+	lua_pushliteral(L, "timeout"); /* upvalue 1: "timeout" */
+	lua_pushcclosure(L, sleeper_sleep, 1);
 	lua_setfield(L, -2, "sleep");
 	/* set sleeper function */
 	lua_pushcclosure(L, sleeper_new, 1);
