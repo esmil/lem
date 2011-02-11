@@ -38,18 +38,20 @@
 #define lem_log_error lem_debug
 #endif
 
+#define LEM_INITIAL_QUEUESIZE 8 /* this must be a power of 2 */
 #define LEM_THREADTABLE 1
 
-struct lem_runqueue_node {
-	struct lem_runqueue_node *next;
+struct lem_runqueue_slot {
 	lua_State *T;
 	int nargs;
 };
 
 struct lem_runqueue {
 	struct ev_idle w;
-	struct lem_runqueue_node *first;
-	struct lem_runqueue_node *last;
+	unsigned long first;
+	unsigned long last;
+	unsigned long mask;
+	struct lem_runqueue_slot *queue;
 	int status;
 	unsigned error : 1;
 };
@@ -134,38 +136,58 @@ lem_forgetthread(lua_State *T)
 void
 lem_queue(lua_State *T, int nargs)
 {
-	struct lem_runqueue_node *n;
+	struct lem_runqueue_slot *slot;
 
 	assert(T != NULL);
 	lem_debug("enqueueing thread with %d argument%s",
 	              nargs, nargs == 1 ? "" : "s");
 
-	/* create new node */
-	n = lem_xmalloc(sizeof(struct lem_runqueue_node));
-	n->next = NULL;
-	n->T = T;
-	n->nargs = nargs;
-
-	/* insert node */
-	if (rq.last) {
-		rq.last->next = n;
-		rq.last = n;
-	} else {
-		rq.first = rq.last = n;
+	if (rq.first == rq.last)
 		ev_idle_start(EV_G_ &rq.w);
+
+	slot = &rq.queue[rq.last];
+	slot->T = T;
+	slot->nargs = nargs;
+
+	rq.last++;
+	rq.last &= rq.mask;
+	if (rq.first == rq.last) {
+		unsigned long i;
+		unsigned long j;
+		struct lem_runqueue_slot *new_queue;
+
+		lem_debug("expanding queue to %lu slots", 2*(rq.mask + 1));
+		new_queue = lem_xmalloc(2*(rq.mask + 1)
+				* sizeof(struct lem_runqueue_slot));
+
+		i = 0;
+		j = rq.first;
+		do {
+			new_queue[i] = rq.queue[j];
+
+			i++;
+			j++;
+			j &= rq.mask;
+		} while (j != rq.first);
+
+		free(rq.queue);
+		rq.queue = new_queue;
+		rq.first = 0;
+		rq.last = i;
+		rq.mask = 2*rq.mask + 1;
 	}
 }
 
 static void
 runqueue_pop(EV_P_ struct ev_idle *w, int revents)
 {
-	struct lem_runqueue_node *n = rq.first;
+	struct lem_runqueue_slot *slot;
 	lua_State *T;
 	int nargs;
 
 	(void)revents;
 
-	if (n == NULL) { /* queue is empty */
+	if (rq.first == rq.last) { /* queue is empty */
 		lem_debug("runqueue is empty");
 		ev_idle_stop(EV_A_ w);
 		return;
@@ -173,15 +195,13 @@ runqueue_pop(EV_P_ struct ev_idle *w, int revents)
 
 	lem_debug("running thread...");
 
-	T = n->T;
-	nargs = n->nargs;
 
-	/* dequeue first node */
-	rq.first = n->next;
-	if (n->next == NULL)
-		rq.last = NULL;
-	
-	free(n);
+	slot = &rq.queue[rq.first];
+	T = slot->T;
+	nargs = slot->nargs;
+
+	rq.first++;
+	rq.first &= rq.mask;
 
 	/* run Lua thread */
 	switch (lua_resume(T, nargs)) {
@@ -292,7 +312,11 @@ main(int argc, char *argv[])
 	/* initialize runqueue */
 	ev_idle_init(&rq.w, runqueue_pop);
 	ev_idle_start(EV_G_ &rq.w);
-	rq.first = rq.last = NULL;
+	rq.queue = lem_xmalloc(LEM_INITIAL_QUEUESIZE
+			* sizeof(struct lem_runqueue_slot));
+	rq.first = rq.last = 0;
+	rq.mask = LEM_INITIAL_QUEUESIZE - 1;
+
 	rq.error = 0;
 	rq.status = EXIT_SUCCESS;
 
@@ -313,12 +337,7 @@ main(int argc, char *argv[])
 	lua_close(L);
 
 	/* free runqueue */
-	while (rq.first) {
-		struct lem_runqueue_node *n = rq.first;
-
-		rq.first = n->next;
-		free(n);
-	}
+	free(rq.queue);
 
 	/* close default loop */
 	ev_default_destroy();
@@ -328,6 +347,8 @@ main(int argc, char *argv[])
 error:
 	if (L)
 		lua_close(L);
+	if (rq.queue)
+		free(rq.queue);
 	ev_default_destroy();
 	return EXIT_FAILURE;
 }
