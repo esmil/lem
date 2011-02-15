@@ -19,7 +19,7 @@ by other coroutines when calling functions which might suspend the currently
 running coroutine for a while.
 
 This also allows you to write libraries which automatically spawn
-new coroutines and runs Lua functions to handle incoming events.
+new coroutines and run Lua functions to handle incoming events.
 
 [Lua]: http://www.lua.org/
 [libev]: http://libev.schmorp.de/
@@ -42,8 +42,8 @@ Use
 
 to change the install path.
 
-The complete Lua 5.1.4 sources are included so having Lua installed on your
-system is not required to build the Lua Event Machine.
+Both the Lua 5.1.4 and libev 4.03 sources are included so having Lua or
+libev installed on your system is not required to build the Lua Event Machine.
 
 Usage
 -----
@@ -97,8 +97,9 @@ This sets `utils` to a table with the following functions.
 * __utils.exit([status])__
 
   The function will stop the main loop and exit the Lua Event Machine.
-  The only difference between this function and `os.exit()` is that this function
-  will let any garbage collection metafunctions run before the program exits.
+  The only difference between this function and `os.exit()` is that this
+  function will let any garbage collection metafunctions run before the
+  program exits.
 
   If `status` is supplied this will be the exit status of program, otherwise
   `EXIT_SUCCESS` is used.
@@ -121,8 +122,8 @@ This sets `utils` to a table with the following functions.
 
   The timeout should have at least milliseconds resolution, but since
   other coroutines could be running, and even more coroutines scheduled
-  for running when the timeout occurs, no guarantees can be made as to exactly
-  how long time the coroutine will be suspended.
+  for running when the timeout occurs, no guarantees can be made as to
+  exactly how long time the coroutine will be suspended.
 
 * __sleeper:wakeup(...)__
 
@@ -131,8 +132,8 @@ This sets `utils` to a table with the following functions.
   Any arguments given to this method will be returned by the `sleeper:sleep()`
   method called by the sleeping coroutine.
 
-  If no coroutine is currently sleeping on the sleeper object this method
-  will return `nil, 'not sleeping'`, otherwise it will return `true`.
+  Returns `true` on succes and `nil, 'not sleeping'` if no coroutine is
+  currently sleeping on the object.
 
 * __utils.timer(seconds, func)__
 
@@ -144,15 +145,16 @@ This sets `utils` to a table with the following functions.
 
 * __timer:cancel()__
 
-  This method cancels the timer. If the coroutine has already been scheduled
-  to run this method shall return `nil, 'expired'`, `true` otherwise.
+  This method cancels the timer.
+  Returns `true` on success and `nil, 'expired'` if the coroutine has already
+  been scheduled to run.
 
 
 License
 -------
 
-The Lua Event Machine is free software. It is distributed under the terms of the
-[GNU General Public License][gpl]
+The Lua Event Machine is free software. It is distributed under the terms
+of the [GNU General Public License][gpl]
 
 [gpl]: http://www.fsf.org/licensing/licenses/gpl.html
 
