@@ -215,6 +215,20 @@ yield_lua(lua_State *T)
 }
 
 static int
+sethandler_lua(lua_State *T)
+{
+	if (lua_gettop(T) > 0) {
+		luaL_checktype(T, 1, LUA_TFUNCTION);
+		lua_settop(T, 1);
+	} else
+		lua_pushboolean(T, 1);
+
+	lem_sethandler(T);
+
+	return 0;
+}
+
+static int
 exit_lua(lua_State *T)
 {
 	int status = (int)luaL_checknumber(T, 1);
@@ -264,6 +278,10 @@ int luaopen_lem_utils(lua_State *L)
 	/* set yield function */
 	lua_pushcfunction(L, yield_lua);
 	lua_setfield(L, 2, "yield");
+
+	/* set sethandler function */
+	lua_pushcfunction(L, sethandler_lua);
+	lua_setfield(L, 2, "sethandler");
 
 	/* set exit function */
 	lua_pushcfunction(L, exit_lua);

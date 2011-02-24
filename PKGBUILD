@@ -8,6 +8,7 @@ arch=('i686' 'x86_64' 'armv5tel' 'armv7l')
 url="https://github.com/esmil/lem"
 license=('GPL')
 depends=('glibc')
+optdepends=('lem-streams: for lem-repl')
 source=()
 
 build() {

@@ -8,11 +8,12 @@ LUA_VERSION = 5.1
 DESTDIR     =
 PREFIX      = /usr/local
 BINDIR      = $(PREFIX)/bin
-LIBDIR      = $(PREFIX)/lib/lua/$(LUA_VERSION)/lem
+LIBDIR      = $(PREFIX)/lib/lua/$(LUA_VERSION)
 INCDIR      = $(PREFIX)/include
 
-programs = lem utils.so
 headers  = lem.h config.h macros.h lua/luaconf.h lua/lua.h lua/lauxlib.h libev/ev.h
+programs = lem utils.so
+scripts  = repl.lua lem-repl
 
 ifdef NDEBUG
 DEFINES += -DNDEBUG
@@ -80,6 +81,10 @@ lem-install: lem bindir-install
 	$Mecho "  INSTALL $<"
 	$O$(INSTALL) $< $(DESTDIR)$(BINDIR)/$<
 
+lem-repl-install: lem-repl bindir-install
+	$Mecho "  INSTALL $<"
+	$O$(INSTALL) $< $(DESTDIR)$(BINDIR)/$<
+
 incdir-install:
 	$Mecho "  INSTALL -d $(INCDIR)/lem"
 	$O$(INSTALL) -d $(DESTDIR)$(INCDIR)/lem
@@ -94,13 +99,17 @@ lem.h-install: lem.h incdir-install
 
 libdir-install:
 	$Mecho "  INSTALL -d $(LIBDIR)"
-	$O$(INSTALL) -d $(DESTDIR)$(LIBDIR)
+	$O$(INSTALL) -d $(DESTDIR)$(LIBDIR)/lem
 
 %.so-install: %.so libdir-install
 	$Mecho "  INSTALL $<"
-	$O$(INSTALL) $< $(DESTDIR)$(LIBDIR)/$<
+	$O$(INSTALL) $< $(DESTDIR)$(LIBDIR)/lem/$<
 
-install: $(programs:%=%-install) $(headers:%=%-install)
+%.lua-install: %.lua libdir-install
+	$Mecho "  INSTALL $<"
+	$O$(INSTALL) $< $(DESTDIR)$(LIBDIR)/lem/$<
+
+install: $(headers:%=%-install) $(programs:%=%-install) $(scripts:%=%-install)
 
 clean:
 	rm -f config.h $(programs) *.o lua/*.o *.c~ *.h~

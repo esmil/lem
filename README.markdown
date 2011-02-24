@@ -154,7 +154,7 @@ License
 -------
 
 The Lua Event Machine is free software. It is distributed under the terms
-of the [GNU General Public License][gpl]
+of the [GNU General Public License][gpl].
 
 [gpl]: http://www.fsf.org/licensing/licenses/gpl.html
 

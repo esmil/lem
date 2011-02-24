@@ -134,6 +134,17 @@ lem_forgetthread(lua_State *T)
 }
 
 void
+lem_sethandler(lua_State *T)
+{
+	/* push T to L */
+	lua_pushthread(T);
+	lua_xmove(T, L, 1);
+	/* move handler to L */
+	lua_xmove(T, L, 1);
+	lua_rawset(L, LEM_THREADTABLE);
+}
+
+void
 lem_queue(lua_State *T, int nargs)
 {
 	struct lem_runqueue_slot *slot;
@@ -220,7 +231,35 @@ runqueue_pop(EV_P_ struct ev_idle *w, int revents)
 	case LUA_ERRRUN: /* runtime error */
 		lem_debug("thread errored");
 
+		/* push T to L */
+		lua_pushthread(T);
 		lua_xmove(T, L, 1);
+
+		/* push thread_table[T] */
+		lua_pushvalue(L, -1);
+		lua_rawget(L, LEM_THREADTABLE);
+		if (lua_type(L, -1) == LUA_TFUNCTION) {
+			lua_State *S = lem_newthread();
+
+			/* move error handler to S */
+			lua_xmove(L, S, 1);
+			/* move error message to S */
+			lua_xmove(T, S, 1);
+			/* queue thread */
+			lem_debug("queueing error handler: %s",
+			          lua_tostring(S, -1));
+			lem_queue(S, 1);
+
+			/* thread_table[T] = nil */
+			lua_pushnil(L);
+			lua_rawset(L, LEM_THREADTABLE);
+			return;
+		}
+		lem_debug("no error handler");
+
+		/* move error message to L */
+		lua_xmove(T, L, 1);
+
 		rq.error = 1;
 		rq.status = EXIT_FAILURE;
 		ev_unloop(EV_A_ EVUNLOOP_ALL);
@@ -330,7 +369,7 @@ main(int argc, char *argv[])
 
 	if (rq.error) {
 		/* print error message */
-		lem_log_error("%s", lua_tostring(L, lua_gettop(L)));
+		lem_log_error("%s", lua_tostring(L, -1));
 	}
 
 	/* shutdown Lua */
