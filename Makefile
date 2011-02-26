@@ -11,6 +11,12 @@ BINDIR      = $(PREFIX)/bin
 LIBDIR      = $(PREFIX)/lib/lua/$(LUA_VERSION)
 INCDIR      = $(PREFIX)/include
 
+OS = $(shell uname)
+
+ifeq ($(OS), Linux)
+DL = -ldl
+endif
+
 headers  = lem.h config.h macros.h lua/luaconf.h lua/lua.h lua/lauxlib.h libev/ev.h
 programs = lem utils.so
 scripts  = repl.lua lem-repl
@@ -39,7 +45,7 @@ LIB_O=	lauxlib.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o \
 
 all: $(programs)
 
-config.h: config.in
+config.h: config.$(OS)
 	$Mecho '  SED $@'
 	$O$(SED) -e 's|@PREFIX@|$(PREFIX)/|' $< > $@
 
@@ -61,7 +67,7 @@ event.o: event.c config.h
 
 lem: $(CORE_O:%=lua/%) $(LIB_O:%=lua/%) event.o lem.o
 	$Mecho '  LD $@'
-	$O$(CC) -rdynamic -lm -ldl $(LDFLAGS) $^ -o $@
+	$O$(CC) -rdynamic -lm $(DL) $(LDFLAGS) $^ -o $@
 
 utils.so: utils.pic.o
 	$Mecho '  LD $@'

@@ -32,6 +32,12 @@
 #include "libev/ev.h"
 #include "macros.h"
 
+#if EV_USE_KQUEUE
+#define LEM_LOOPFLAGS EVBACKEND_KQUEUE
+#else
+#define LEM_LOOPFLAGS 0
+#endif
+
 #ifdef NDEBUG
 #define lem_log_error(fmt, ...) fprintf(stderr, fmt "\n", ##__VA_ARGS__)
 #else
@@ -325,10 +331,10 @@ main(int argc, char *argv[])
 	}
 
 #if EV_MULTIPLICITY
-	lem_loop = ev_default_loop(0);
+	lem_loop = ev_default_loop(LEM_LOOPFLAGS);
 	if (lem_loop == NULL) {
 #else
-	if (!ev_default_loop(0)) {
+	if (!ev_default_loop(LEM_LOOPFLAGS)) {
 #endif
 		lem_log_error("Error initializing event loop");
 		return EXIT_FAILURE;
