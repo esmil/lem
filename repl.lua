@@ -85,7 +85,7 @@ local function repl(done, name, ins, outs)
 	end
 
 	function onerror(err)
-		local ok, err = outs:write(format("ERROR: %s\n", err))
+		local ok, err = outs:write(format("%s\n", err))
 		if not ok then return done(nil, err) end
 
 		return getcode()
