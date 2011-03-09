@@ -73,7 +73,7 @@ sleeper_sleep(lua_State *T)
 		return 2;
 	}
 
-	if (lua_gettop(T) > 1) {
+	if (lua_gettop(T) > 1 && !lua_isnil(T, 2)) {
 		ev_tstamp delay = (ev_tstamp)luaL_checknumber(T, 2);
 
 		if (delay <= 0) {
