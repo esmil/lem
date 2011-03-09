@@ -16,9 +16,6 @@
  * along with LEM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define LUA_USE_LINUX
-#define LUA_ROOT "@PREFIX@"
-
 #define EV_STANDALONE        1
 #define EV_USE_MONOTONIC     1
 #define EV_USE_CLOCK_SYSCALL 1

@@ -20,9 +20,9 @@
 #define _LEM_H
 
 #include <lem/config.h>
-#include <lem/lua.h>
-#include <lem/lauxlib.h>
 #include <lem/ev.h>
+#include <lua.h>
+#include <lauxlib.h>
 #include <lem/macros.h>
 
 #if EV_MULTIPLICITY

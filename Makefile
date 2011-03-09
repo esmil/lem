@@ -1,28 +1,63 @@
-CC      = gcc
-CFLAGS  ?= -O2 -pipe -Wall -Wextra -Wno-variadic-macros -Wno-strict-aliasing
-STRIP   = strip
-INSTALL = install
-SED     = sed
+CC           = gcc
+CFLAGS      ?= -O2 -pipe -Wall -Wextra -Wno-variadic-macros -Wno-strict-aliasing
+PKGCONFIG    = pkg-config
+STRIP        = strip
+INSTALL      = install
+SED          = sed
+UNAME        = uname
 
-LUA_VERSION = 5.1
-DESTDIR     =
-PREFIX      = /usr/local
-BINDIR      = $(PREFIX)/bin
-LIBDIR      = $(PREFIX)/lib/lua/$(LUA_VERSION)
-INCDIR      = $(PREFIX)/include
+headers      = lem.h config.h macros.h libev/ev.h
+programs     = lem utils.so
+scripts      = repl.lua lem-repl
 
-OS = $(shell uname)
+objects      = event.o lem.o
+
+OS           = $(shell $(UNAME))
+LUA          = embedded
+LUA_VERSION  = 5.1
+DESTDIR      =
+PREFIX       = /usr/local
+BINDIR       = $(PREFIX)/bin
+INCDIR       = $(PREFIX)/include
+PKG_CONFIG_PATH = $(PREFIX)/lib/pkgconfig
+
+ifeq ($(LUA),embedded)
+CFLAGS      += -Ilua -DLUA_USE_LINUX -DLUA_ROOT='"$(PREFIX)/"'
+LIBRARIES    = -lm
 
 ifeq ($(OS), Linux)
-DL = -ldl
+LIBRARIES   += -ldl
 endif
 
-headers  = lem.h config.h macros.h lua/luaconf.h lua/lua.h lua/lauxlib.h libev/ev.h
-programs = lem utils.so
-scripts  = repl.lua lem-repl
+headers     += lua/luaconf.h lua/lua.h lua/lauxlib.h
+# From lua/Makefile
+CORE_O       = lapi.o lcode.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o \
+               lobject.o lopcodes.o lparser.o lstate.o lstring.o ltable.o ltm.o  \
+               lundump.o lvm.o lzio.o
+LIB_O        = lauxlib.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o \
+               lstrlib.o loadlib.o linit.o
+objects     += $(CORE_O:%=lua/%) $(LIB_O:%=lua/%)
+
+LUA_PATH     = $(PREFIX)/share/lua/$(LUA_VERSION)
+LUA_CPATH    = $(PREFIX)/lib/lua/$(LUA_VERSION)
+LIB_INCLUDES = -I$(INCDIR) -I$(INCDIR)/lem
+else
+LUA_PATH     = $(shell $(LUA) -e 'print(package.path:match("([^;]*/lua/$(LUA_VERSION))"))')
+LUA_CPATH    = $(shell $(LUA) -e 'print(package.cpath:match("([^;]*/lua/$(LUA_VERSION))"))')
+
+ifeq ($(findstring LuaJIT, $(shell $(LUA) -v 2>&1)),)
+LIBRARIES    = -llua
+LUA_INCDIR   = $(INCDIR)
+LIB_INCLUDES = -I$(LUA_INCDIR)
+else
+CFLAGS      += $(shell $(PKGCONFIG) --cflags luajit)
+LIBRARIES    = $(shell $(PKGCONFIG) --libs luajit)
+LIB_INCLUDES = -I$(INCDIR) $(shell $(PKGCONFIG) --cflags-only-I luajit)
+endif
+endif
 
 ifdef NDEBUG
-DEFINES += -DNDEBUG
+CFLAGS += -DNDEBUG
 endif
 
 ifdef V
@@ -33,41 +68,32 @@ M=@
 O=@
 endif
 
-# From lua/Makefile
-CORE_O=	lapi.o lcode.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o \
-	lobject.o lopcodes.o lparser.o lstate.o lstring.o ltable.o ltm.o  \
-	lundump.o lvm.o lzio.o
-LIB_O=	lauxlib.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o \
-	lstrlib.o loadlib.o linit.o
-
-.PHONY: all lua strip install clean
+.PHONY: all strip install clean
 .PRECIOUS: %.pic.o
 
 all: $(programs)
 
 config.h: config.$(OS)
-	$Mecho '  SED $@'
-	$O$(SED) -e 's|@PREFIX@|$(PREFIX)/|' $< > $@
+	$Mecho '  CP $@'
+	$Ocp $< $@
 
-event.o: event.c config.h
-	$Mecho '  CC $@'
-	$O$(CC) $(CFLAGS) -Iinclude -w $(DEFINES) -c $<
+lem.pc: lem.pc.in
+	$Mecho '  SED $@'
+	$O$(SED) -e 's|@PATH@|$(LUA_PATH)|;s|@CPATH@|$(LUA_CPATH)|;s|@LIB_INCLUDES@|$(LIB_INCLUDES)|' $< > $@
 
 %.pic.o: %.c config.h
 	$Mecho '  CC $@'
-	$O$(CC) $(CFLAGS) -Iinclude -fPIC -nostartfiles $(DEFINES) -c $< -o $@
+	$O$(CC) $(CFLAGS) -Iinclude -fPIC -nostartfiles -c $< -o $@
 
-%.o: %.c %.h config.h
-	$Mecho '  CC $@'
-	$O$(CC) $(CFLAGS) -Iinclude $(DEFINES) -c $< -o $@
+event.o: CFLAGS += -w
 
 %.o: %.c config.h
 	$Mecho '  CC $@'
-	$O$(CC) $(CFLAGS) -Iinclude $(DEFINES) -c $< -o $@
+	$O$(CC) $(CFLAGS) -Iinclude -c $< -o $@
 
-lem: $(CORE_O:%=lua/%) $(LIB_O:%=lua/%) event.o lem.o
+lem: $(objects)
 	$Mecho '  LD $@'
-	$O$(CC) -rdynamic -lm $(DL) $(LDFLAGS) $^ -o $@
+	$O$(CC) -rdynamic $(LIBRARIES) $(LDFLAGS) $^ -o $@
 
 utils.so: utils.pic.o
 	$Mecho '  LD $@'
@@ -97,25 +123,37 @@ incdir-install:
 
 lem.h-install: lem.h incdir-install
 	$Mecho "  INSTALL $<"
-	$O$(INSTALL) $< $(DESTDIR)$(INCDIR)/$<
+	$O$(INSTALL) -m644 $< $(DESTDIR)$(INCDIR)/$<
 
 %.h-install: %.h incdir-install
 	$Mecho "  INSTALL $(notdir $<)"
-	$O$(INSTALL) $< $(DESTDIR)$(INCDIR)/lem/$(notdir $<)
+	$O$(INSTALL) -m644 $< $(DESTDIR)$(INCDIR)/lem/$(notdir $<)
 
-libdir-install:
-	$Mecho "  INSTALL -d $(LIBDIR)"
-	$O$(INSTALL) -d $(DESTDIR)$(LIBDIR)/lem
+path-install:
+	$Mecho "  INSTALL -d $(LUA_PATH)"
+	$O$(INSTALL) -d $(DESTDIR)$(LUA_PATH)/lem
 
-%.so-install: %.so libdir-install
+%.lua-install: %.lua path-install
 	$Mecho "  INSTALL $<"
-	$O$(INSTALL) $< $(DESTDIR)$(LIBDIR)/lem/$<
+	$O$(INSTALL) -m644 $< $(DESTDIR)$(LUA_PATH)/lem/$<
 
-%.lua-install: %.lua libdir-install
+cpath-install:
+	$Mecho "  INSTALL -d $(LUA_CPATH)"
+	$O$(INSTALL) -d $(DESTDIR)$(LUA_CPATH)/lem
+
+%.so-install: %.so cpath-install
 	$Mecho "  INSTALL $<"
-	$O$(INSTALL) $< $(DESTDIR)$(LIBDIR)/lem/$<
+	$O$(INSTALL) $< $(DESTDIR)$(LUA_CPATH)/lem/$<
 
-install: $(headers:%=%-install) $(programs:%=%-install) $(scripts:%=%-install)
+pkgdir-install:
+	$Mecho "  INSTALL -d $(PKG_CONFIG_PATH)"
+	$O$(INSTALL) -d $(DESTDIR)$(PKG_CONFIG_PATH)
+
+%.pc-install: %.pc pkgdir-install
+	$Mecho "  INSTALL $<"
+	$O$(INSTALL) -m644 $< $(DESTDIR)$(PKG_CONFIG_PATH)/$<
+
+install: lem.pc-install $(headers:%=%-install) $(programs:%=%-install) $(scripts:%=%-install)
 
 clean:
-	rm -f config.h $(programs) *.o lua/*.o *.c~ *.h~
+	rm -f config.h lem.pc $(programs) *.o lua/*.o *.c~ *.h~

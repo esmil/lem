@@ -1,1 +1,0 @@
-../../lua/luaconf.h

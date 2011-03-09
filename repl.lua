@@ -114,4 +114,4 @@ return {
 	end,
 }
 
--- vim: syntax=lua ts=2 sw=2 noet:
+-- vim: ts=2 sw=2 noet:

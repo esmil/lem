@@ -38,12 +38,20 @@ to `/usr/local/include/`.
 Use
 
     $ make clean
-    $ make PREFIX=<your custom path> install
+    $ make PREFIX=/install/path install
 
 to change the install path.
 
 Both the Lua 5.1.4 and libev 4.03 sources are included so having Lua or
 libev installed on your system is not required to build the Lua Event Machine.
+
+You can, however, link against a shared Lua or [LuaJIT][] library by
+setting the LUA variable to point to the installed interpreter. E.g:
+
+    $ make clean
+    $ make PREFIX=/install/path LUA=/path/to/lua/or/luajit2 install
+
+[luajit]: http://luajit.org/luajit.html
 
 Usage
 -----
