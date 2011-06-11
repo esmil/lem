@@ -21,6 +21,12 @@ BINDIR       = $(PREFIX)/bin
 INCDIR       = $(PREFIX)/include
 PKG_CONFIG_PATH = $(PREFIX)/lib/pkgconfig
 
+ifeq ($(OS),Darwin)
+SHARED       = -dynamiclib -Wl,-undefined,dynamic_lookup
+else
+SHARED       = -shared
+endif
+
 ifeq ($(LUA),embedded)
 CFLAGS      += -Ilua -DLUA_USE_LINUX -DLUA_ROOT='"$(PREFIX)/"'
 LIBRARIES    = -lm
@@ -97,7 +103,7 @@ lem: $(objects)
 
 utils.so: utils.pic.o
 	$Mecho '  LD $@'
-	$O$(CC) -shared $(LDFLAGS) $^ -o $@
+	$O$(CC) $(SHARED) $(LDFLAGS) $^ -o $@
 
 %-strip: %
 	$Mecho '  STRIP $<'
