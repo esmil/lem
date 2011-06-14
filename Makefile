@@ -23,6 +23,7 @@ PKG_CONFIG_PATH = $(PREFIX)/lib/pkgconfig
 
 ifeq ($(OS),Darwin)
 SHARED       = -dynamiclib -Wl,-undefined,dynamic_lookup
+STRIP_ARGS   = -u -r
 else
 SHARED       = -shared
 endif
@@ -107,7 +108,7 @@ utils.so: utils.pic.o
 
 %-strip: %
 	$Mecho '  STRIP $<'
-	$O$(STRIP) $<
+	$O$(STRIP) $(STRIP_ARGS) $<
 
 strip: $(programs:%=%-strip)
 
