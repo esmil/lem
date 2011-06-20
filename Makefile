@@ -28,13 +28,13 @@ else
 SHARED       = -shared
 endif
 
-ifeq ($(LUA),embedded)
-CFLAGS      += -Ilua -DLUA_USE_LINUX -DLUA_ROOT='"$(PREFIX)/"'
 LIBRARIES    = -lm
-
 ifeq ($(OS), Linux)
 LIBRARIES   += -ldl
 endif
+
+ifeq ($(LUA),embedded)
+CFLAGS      += -Ilua -DLUA_USE_LINUX -DLUA_ROOT='"$(PREFIX)/"'
 
 headers     += lua/luaconf.h lua/lua.h lua/lauxlib.h
 # From lua/Makefile
@@ -53,12 +53,12 @@ LUA_PATH     = $(shell $(LUA) -e 'print(package.path:match("([^;]*/lua/$(LUA_VER
 LUA_CPATH    = $(shell $(LUA) -e 'print(package.cpath:match("([^;]*/lua/$(LUA_VERSION))"))')
 
 ifeq ($(findstring LuaJIT, $(shell $(LUA) -v 2>&1)),)
-LIBRARIES    = -llua
+LIBRARIES   += -llua
 LUA_INCDIR   = $(INCDIR)
 LIB_INCLUDES = -I$(LUA_INCDIR)
 else
 CFLAGS      += $(shell $(PKGCONFIG) --cflags luajit)
-LIBRARIES    = $(shell $(PKGCONFIG) --libs luajit)
+LIBRARIES   += $(shell $(PKGCONFIG) --libs luajit)
 LIB_INCLUDES = -I$(INCDIR) $(shell $(PKGCONFIG) --cflags-only-I luajit)
 endif
 endif
@@ -100,7 +100,7 @@ event.o: CFLAGS += -w
 
 lem: $(objects)
 	$Mecho '  LD $@'
-	$O$(CC) -rdynamic $(LIBRARIES) $(LDFLAGS) $^ -o $@
+	$O$(CC) $^ -rdynamic $(LDFLAGS) $(LIBRARIES) -o $@
 
 utils.so: utils.pic.o
 	$Mecho '  LD $@'
