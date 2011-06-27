@@ -69,7 +69,7 @@ static lua_State *L;
 static struct lem_runqueue rq;
 
 static
-void oom()
+void oom(void)
 {
 	static const char e[] = "Out of memory\n";
 	
@@ -93,7 +93,7 @@ lem_xmalloc(size_t size)
 }
 
 static int
-ignore_sigpipe()
+ignore_sigpipe(void)
 {
 	struct sigaction act;
 
@@ -115,7 +115,7 @@ ignore_sigpipe()
 }
 
 lua_State *
-lem_newthread()
+lem_newthread(void)
 {
 	lua_State *T = lua_newthread(L);
 

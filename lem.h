@@ -30,7 +30,7 @@ extern struct ev_loop *lem_loop;
 #endif
 
 void *lem_xmalloc(size_t size);
-lua_State *lem_newthread();
+lua_State *lem_newthread(void);
 void lem_forgetthread(lua_State *T);
 void lem_sethandler(lua_State *T);
 void lem_queue(lua_State *T, int nargs);
