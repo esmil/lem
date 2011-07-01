@@ -68,11 +68,11 @@ CFLAGS += -DNDEBUG
 endif
 
 ifdef V
-M=@\#
-O=
+E=@\#
+Q=
 else
-M=@
-O=@
+E=@echo
+Q=@
 endif
 
 .PHONY: all strip install clean
@@ -81,84 +81,84 @@ endif
 all: $(programs)
 
 config.h: config.$(OS)
-	$Mecho '  CP $@'
-	$Ocp $< $@
+	$E '  CP $@'
+	$Qcp $< $@
 
 lem.pc: lem.pc.in
-	$Mecho '  SED $@'
-	$O$(SED) -e 's|@PATH@|$(LUA_PATH)|;s|@CPATH@|$(LUA_CPATH)|;s|@LIB_INCLUDES@|$(LIB_INCLUDES)|' $< > $@
+	$E '  SED $@'
+	$Q$(SED) -e 's|@PATH@|$(LUA_PATH)|;s|@CPATH@|$(LUA_CPATH)|;s|@LIB_INCLUDES@|$(LIB_INCLUDES)|' $< > $@
 
 %.pic.o: %.c config.h
-	$Mecho '  CC $@'
-	$O$(CC) $(CFLAGS) -Iinclude -fPIC -nostartfiles -c $< -o $@
+	$E '  CC $@'
+	$Q$(CC) $(CFLAGS) -Iinclude -fPIC -nostartfiles -c $< -o $@
 
 event.o: CFLAGS += -w
 
 %.o: %.c config.h
-	$Mecho '  CC $@'
-	$O$(CC) $(CFLAGS) -Iinclude -c $< -o $@
+	$E '  CC $@'
+	$Q$(CC) $(CFLAGS) -Iinclude -c $< -o $@
 
 lem: $(objects)
-	$Mecho '  LD $@'
-	$O$(CC) $^ -rdynamic $(LDFLAGS) $(LIBRARIES) -o $@
+	$E '  LD $@'
+	$Q$(CC) $^ -o $@ -rdynamic $(LDFLAGS) $(LIBRARIES)
 
 utils.so: utils.pic.o
-	$Mecho '  LD $@'
-	$O$(CC) $(SHARED) $(LDFLAGS) $^ -o $@
+	$E '  LD $@'
+	$Q$(CC) $(SHARED) $^ -o $@ $(LDFLAGS)
 
 %-strip: %
-	$Mecho '  STRIP $<'
-	$O$(STRIP) $(STRIP_ARGS) $<
+	$E '  STRIP $<'
+	$Q$(STRIP) $(STRIP_ARGS) $<
 
 strip: $(programs:%=%-strip)
 
 bindir-install:
-	$Mecho "  INSTALL -d $(BINDIR)"
-	$O$(INSTALL) -d $(DESTDIR)$(BINDIR)
+	$E "  INSTALL -d $(BINDIR)"
+	$Q$(INSTALL) -d $(DESTDIR)$(BINDIR)
 
 lem-install: lem bindir-install
-	$Mecho "  INSTALL $<"
-	$O$(INSTALL) $< $(DESTDIR)$(BINDIR)/$<
+	$E "  INSTALL $<"
+	$Q$(INSTALL) $< $(DESTDIR)$(BINDIR)/$<
 
 lem-repl-install: lem-repl bindir-install
-	$Mecho "  INSTALL $<"
-	$O$(INSTALL) $< $(DESTDIR)$(BINDIR)/$<
+	$E "  INSTALL $<"
+	$Q$(INSTALL) $< $(DESTDIR)$(BINDIR)/$<
 
 incdir-install:
-	$Mecho "  INSTALL -d $(INCDIR)/lem"
-	$O$(INSTALL) -d $(DESTDIR)$(INCDIR)/lem
+	$E "  INSTALL -d $(INCDIR)/lem"
+	$Q$(INSTALL) -d $(DESTDIR)$(INCDIR)/lem
 
 lem.h-install: lem.h incdir-install
-	$Mecho "  INSTALL $<"
-	$O$(INSTALL) -m644 $< $(DESTDIR)$(INCDIR)/$<
+	$E "  INSTALL $<"
+	$Q$(INSTALL) -m644 $< $(DESTDIR)$(INCDIR)/$<
 
 %.h-install: %.h incdir-install
-	$Mecho "  INSTALL $(notdir $<)"
-	$O$(INSTALL) -m644 $< $(DESTDIR)$(INCDIR)/lem/$(notdir $<)
+	$E "  INSTALL $(notdir $<)"
+	$Q$(INSTALL) -m644 $< $(DESTDIR)$(INCDIR)/lem/$(notdir $<)
 
 path-install:
-	$Mecho "  INSTALL -d $(LUA_PATH)"
-	$O$(INSTALL) -d $(DESTDIR)$(LUA_PATH)/lem
+	$E "  INSTALL -d $(LUA_PATH)"
+	$Q$(INSTALL) -d $(DESTDIR)$(LUA_PATH)/lem
 
 %.lua-install: %.lua path-install
-	$Mecho "  INSTALL $<"
-	$O$(INSTALL) -m644 $< $(DESTDIR)$(LUA_PATH)/lem/$<
+	$E "  INSTALL $<"
+	$Q$(INSTALL) -m644 $< $(DESTDIR)$(LUA_PATH)/lem/$<
 
 cpath-install:
-	$Mecho "  INSTALL -d $(LUA_CPATH)"
-	$O$(INSTALL) -d $(DESTDIR)$(LUA_CPATH)/lem
+	$E "  INSTALL -d $(LUA_CPATH)"
+	$Q$(INSTALL) -d $(DESTDIR)$(LUA_CPATH)/lem
 
 %.so-install: %.so cpath-install
-	$Mecho "  INSTALL $<"
-	$O$(INSTALL) $< $(DESTDIR)$(LUA_CPATH)/lem/$<
+	$E "  INSTALL $<"
+	$Q$(INSTALL) $< $(DESTDIR)$(LUA_CPATH)/lem/$<
 
 pkgdir-install:
-	$Mecho "  INSTALL -d $(PKG_CONFIG_PATH)"
-	$O$(INSTALL) -d $(DESTDIR)$(PKG_CONFIG_PATH)
+	$E "  INSTALL -d $(PKG_CONFIG_PATH)"
+	$Q$(INSTALL) -d $(DESTDIR)$(PKG_CONFIG_PATH)
 
 %.pc-install: %.pc pkgdir-install
-	$Mecho "  INSTALL $<"
-	$O$(INSTALL) -m644 $< $(DESTDIR)$(PKG_CONFIG_PATH)/$<
+	$E "  INSTALL $<"
+	$Q$(INSTALL) -m644 $< $(DESTDIR)$(PKG_CONFIG_PATH)/$<
 
 install: lem.pc-install $(headers:%=%-install) $(programs:%=%-install) $(scripts:%=%-install)
 
