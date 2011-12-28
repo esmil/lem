@@ -18,7 +18,7 @@
 
 local utils   = require 'lem.utils'
 
-local loadstring = loadstring
+local load = load
 local format = string.format
 local concat = table.concat
 local tostring = tostring
@@ -42,7 +42,7 @@ local function repl(done, name, ins, outs)
 		line = line:gsub('^=', 'return ')
 
 		while true do
-			res, err = loadstring(line, name)
+			res, err = load(line, name)
 			if res then break end
 
 			if not err:match("'<eof>'") then

@@ -221,7 +221,7 @@ runqueue_pop(EV_P_ struct ev_idle *w, int revents)
 	rq.first &= rq.mask;
 
 	/* run Lua thread */
-	switch (lua_resume(T, nargs)) {
+	switch (lua_resume(T, NULL, nargs)) {
 	case 0: /* thread finished successfully */
 		lem_debug("thread finished successfully");
 
@@ -234,6 +234,8 @@ runqueue_pop(EV_P_ struct ev_idle *w, int revents)
 
 	case LUA_ERRERR: /* error running error handler */
 		lem_debug("thread errored while running error handler");
+	case LUA_ERRGCMM:
+		lem_debug("error in __gc metamethod");
 	case LUA_ERRRUN: /* runtime error */
 		lem_debug("thread errored");
 

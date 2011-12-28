@@ -3,6 +3,6 @@ cpath=@CPATH@
 
 Name: lem
 Description: A Lua Event Machine
-Version: 0.1
+Version: 0.2
 URL: https://github.com/esmil/lem
 Cflags: @LIB_INCLUDES@

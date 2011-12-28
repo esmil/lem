@@ -14,8 +14,6 @@ objects      = event.o lem.o
 
 OS           = $(shell $(UNAME))
 LUA          = embedded
-LUA_VERSION  = 5.1
-DESTDIR      =
 PREFIX       = /usr/local
 BINDIR       = $(PREFIX)/bin
 INCDIR       = $(PREFIX)/include
@@ -38,19 +36,19 @@ CFLAGS      += -Ilua -DLUA_USE_LINUX -DLUA_ROOT='"$(PREFIX)/"'
 
 headers     += lua/luaconf.h lua/lua.h lua/lauxlib.h
 # From lua/Makefile
-CORE_O       = lapi.o lcode.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o \
-               lobject.o lopcodes.o lparser.o lstate.o lstring.o ltable.o ltm.o  \
-               lundump.o lvm.o lzio.o
-LIB_O        = lauxlib.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o \
-               lstrlib.o loadlib.o linit.o
+CORE_O       = lapi.o lcode.o lctype.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o \
+               lmem.o lobject.o lopcodes.o lparser.o lstate.o lstring.o ltable.o \
+               ltm.o lundump.o lvm.o lzio.o
+LIB_O        = lauxlib.o lbaselib.o lbitlib.o lcorolib.o ldblib.o liolib.o \
+               lmathlib.o loslib.o lstrlib.o ltablib.o loadlib.o linit.o
 objects     += $(CORE_O:%=lua/%) $(LIB_O:%=lua/%)
 
-LUA_PATH     = $(PREFIX)/share/lua/$(LUA_VERSION)
-LUA_CPATH    = $(PREFIX)/lib/lua/$(LUA_VERSION)
+LUA_PATH     = $(PREFIX)/share/lua/5.2
+LUA_CPATH    = $(PREFIX)/lib/lua/5.2
 LIB_INCLUDES = -I$(INCDIR) -I$(INCDIR)/lem
 else
-LUA_PATH     = $(shell $(LUA) -e 'print(package.path:match("([^;]*/lua/$(LUA_VERSION))"))')
-LUA_CPATH    = $(shell $(LUA) -e 'print(package.cpath:match("([^;]*/lua/$(LUA_VERSION))"))')
+LUA_PATH     = $(shell $(LUA) -e 'print(package.path:match("([^;]*)/%?"))')
+LUA_CPATH    = $(shell $(LUA) -e 'print(package.cpath:match("([^;]*)/%?"))')
 
 ifeq ($(findstring LuaJIT, $(shell $(LUA) -v 2>&1)),)
 LIBRARIES   += -llua
@@ -93,6 +91,7 @@ lem.pc: lem.pc.in
 	$Q$(CC) $(CFLAGS) -Iinclude -fPIC -nostartfiles -c $< -o $@
 
 event.o: CFLAGS += -w
+event.o: config.h
 
 %.o: %.c config.h
 	$E '  CC $@'

@@ -238,7 +238,8 @@ exit_lua(lua_State *T)
 	return 0;
 }
 
-int luaopen_lem_utils(lua_State *L)
+int
+luaopen_lem_utils(lua_State *L)
 {
 	/* create module table */
 	lua_newtable(L);
@@ -257,7 +258,7 @@ int luaopen_lem_utils(lua_State *L)
 	lua_setfield(L, -2, "sleep");
 	/* set sleeper function */
 	lua_pushcclosure(L, sleeper_new, 1);
-	lua_setfield(L, 2, "sleeper");
+	lua_setfield(L, -2, "sleeper");
 
 	/* create new timer metatable */
 	lua_newtable(L);
@@ -269,23 +270,23 @@ int luaopen_lem_utils(lua_State *L)
 	lua_setfield(L, -2, "cancel");
 	/* set timer function */
 	lua_pushcclosure(L, timer_new, 1);
-	lua_setfield(L, 2, "timer");
+	lua_setfield(L, -2, "timer");
 
 	/* set spawn function */
 	lua_pushcfunction(L, spawn);
-	lua_setfield(L, 2, "spawn");
+	lua_setfield(L, -2, "spawn");
 
 	/* set yield function */
 	lua_pushcfunction(L, yield_lua);
-	lua_setfield(L, 2, "yield");
+	lua_setfield(L, -2, "yield");
 
 	/* set sethandler function */
 	lua_pushcfunction(L, sethandler_lua);
-	lua_setfield(L, 2, "sethandler");
+	lua_setfield(L, -2, "sethandler");
 
 	/* set exit function */
 	lua_pushcfunction(L, exit_lua);
-	lua_setfield(L, 2, "exit");
+	lua_setfield(L, -2, "exit");
 
 	return 1;
 }

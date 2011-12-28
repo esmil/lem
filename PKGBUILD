@@ -1,7 +1,7 @@
 # Maintainer: Emil Renner Berthing <esmil@mailme.dk>
 
 pkgname=lem
-pkgver=0.1
+pkgver=0.2
 pkgrel=1
 pkgdesc="A Lua Event Machine"
 arch=('i686' 'x86_64' 'armv5tel' 'armv7l')
