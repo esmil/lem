@@ -59,7 +59,6 @@ struct lem_runqueue {
 	unsigned long mask;
 	struct lem_runqueue_slot *queue;
 	int status;
-	unsigned error : 1;
 };
 
 #if EV_MULTIPLICITY
@@ -268,7 +267,6 @@ runqueue_pop(EV_P_ struct ev_idle *w, int revents)
 		/* move error message to L */
 		lua_xmove(T, L, 1);
 
-		rq.error = 1;
 		rq.status = EXIT_FAILURE;
 		ev_unloop(EV_A_ EVUNLOOP_ALL);
 		return;
@@ -280,7 +278,6 @@ runqueue_pop(EV_P_ struct ev_idle *w, int revents)
 		lem_debug("lua_resume: unknown error");
 
 		lua_pushliteral(L, "unknown error");
-		rq.error = 1;
 		rq.status = EXIT_FAILURE;
 		ev_unloop(EV_A_ EVUNLOOP_ALL);
 		return;
@@ -363,8 +360,6 @@ main(int argc, char *argv[])
 			* sizeof(struct lem_runqueue_slot));
 	rq.first = rq.last = 0;
 	rq.mask = LEM_INITIAL_QUEUESIZE - 1;
-
-	rq.error = 0;
 	rq.status = EXIT_SUCCESS;
 
 	/* load file */
@@ -375,8 +370,8 @@ main(int argc, char *argv[])
 	ev_loop(EV_G_ 0);
 	lem_debug("event loop exited");
 
-	if (rq.error) {
-		/* print error message */
+	/* if there is an error message left on L print it */
+	if (lua_type(L, -1) == LUA_TSTRING) {
 		lem_log_error("%s", lua_tostring(L, -1));
 	}
 
