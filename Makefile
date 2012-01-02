@@ -1,5 +1,6 @@
 CC           = gcc
-CFLAGS      ?= -O2 -pipe -Wall -Wextra -Wno-variadic-macros -Wno-strict-aliasing
+CFLAGS      ?= -O2 -pipe -Wall -Wextra -Wno-variadic-macros
+CFLAGS      += -std=gnu99
 PKGCONFIG    = pkg-config
 STRIP        = strip
 INSTALL      = install
