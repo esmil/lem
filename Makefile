@@ -22,7 +22,7 @@ PKG_CONFIG_PATH = $(PREFIX)/lib/pkgconfig
 
 ifeq ($(OS),Darwin)
 SHARED       = -dynamiclib -Wl,-undefined,dynamic_lookup
-STRIP_ARGS   = -u -r
+STRIP_ARGS   = -x
 else
 SHARED       = -shared
 endif
