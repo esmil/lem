@@ -22,10 +22,10 @@
 #define EV_USE_NANOSLEEP     1
 #define EV_USE_EVENTFD       0
 
-#define EV_USE_SELECT        0
+#define EV_USE_SELECT        1
 #define EV_USE_POLL          0
 #define EV_USE_EPOLL         0
-#define EV_USE_KQUEUE        1
+#define EV_USE_KQUEUE        0
 #define EV_USE_PORT          0
 
 #define EV_MULTIPLICITY      0
