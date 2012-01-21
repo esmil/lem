@@ -238,6 +238,35 @@ exit_lua(lua_State *T)
 	return 0;
 }
 
+static int
+thisthread(lua_State *T)
+{
+	lua_pushthread(T);
+	return 1;
+}
+
+static int
+suspend(lua_State *T)
+{
+	return lua_yield(T, 0);
+}
+
+static int
+resume(lua_State *T)
+{
+	int args;
+	lua_State *S;
+
+	luaL_checktype(T, 1, LUA_TTHREAD);
+	S = lua_tothread(T, 1);
+
+	args = lua_gettop(T) - 1;
+	lua_xmove(T, S, args);
+	lem_queue(S, args);
+
+	return 0;
+}
+
 int
 luaopen_lem_utils(lua_State *L)
 {
@@ -287,6 +316,16 @@ luaopen_lem_utils(lua_State *L)
 	/* set exit function */
 	lua_pushcfunction(L, exit_lua);
 	lua_setfield(L, -2, "exit");
+
+	/* set thisthread function */
+	lua_pushcfunction(L, thisthread);
+	lua_setfield(L, -2, "thisthread");
+	/* set suspend function */
+	lua_pushcfunction(L, suspend);
+	lua_setfield(L, -2, "suspend");
+	/* set resume function */
+	lua_pushcfunction(L, resume);
+	lua_setfield(L, -2, "resume");
 
 	return 1;
 }
