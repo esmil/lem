@@ -37,12 +37,13 @@ CFLAGS      += -Ilua -DLUA_USE_LINUX -DLUA_ROOT='"$(PREFIX)/"'
 
 headers     += lua/luaconf.h lua/lua.h lua/lauxlib.h
 # From lua/Makefile
-CORE_O       = lapi.o lcode.o lctype.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o \
-               lmem.o lobject.o lopcodes.o lparser.o lstate.o lstring.o ltable.o \
-               ltm.o lundump.o lvm.o lzio.o
-LIB_O        = lauxlib.o lbaselib.o lbitlib.o lcorolib.o ldblib.o liolib.o \
-               lmathlib.o loslib.o lstrlib.o ltablib.o loadlib.o linit.o
-objects     += $(CORE_O:%=lua/%) $(LIB_O:%=lua/%)
+#CORE_O       = lapi.o lcode.o lctype.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o \
+#               lmem.o lobject.o lopcodes.o lparser.o lstate.o lstring.o ltable.o \
+#               ltm.o lundump.o lvm.o lzio.o
+#LIB_O        = lauxlib.o lbaselib.o lbitlib.o lcorolib.o ldblib.o liolib.o \
+#               lmathlib.o loslib.o lstrlib.o ltablib.o loadlib.o linit.o
+#objects     += $(CORE_O:%=lua/%) $(LIB_O:%=lua/%)
+objects     += lua.o
 
 LUA_PATH     = $(PREFIX)/share/lua/5.2
 LUA_CPATH    = $(PREFIX)/lib/lua/5.2
