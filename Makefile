@@ -86,7 +86,7 @@ config.h: config.$(OS)
 
 lem.pc: lem.pc.in
 	$E '  SED $@'
-	$Q$(SED) -e 's|@PATH@|$(LUA_PATH)|;s|@CPATH@|$(LUA_CPATH)|;s|@LIB_INCLUDES@|$(LIB_INCLUDES)|' $< > $@
+	$Q$(SED) -e 's|@PATH@|$(LUA_PATH)|;s|@CPATH@|$(LUA_CPATH)|;s|@INCDIR@|$(INCDIR)|;s|@LIB_INCLUDES@|$(LIB_INCLUDES)|' $< > $@
 
 %.pic.o: %.c config.h
 	$E '  CC $@'

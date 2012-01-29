@@ -1,5 +1,6 @@
 path=@PATH@
 cpath=@CPATH@
+incdir=@INCDIR@
 
 Name: lem
 Description: A Lua Event Machine
