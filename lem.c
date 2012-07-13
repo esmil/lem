@@ -44,6 +44,10 @@
 #define lem_log_error lem_debug
 #endif
 
+#ifndef LUA_OK
+#define LUA_OK 0
+#endif
+
 #define LEM_INITIAL_QUEUESIZE 8 /* this must be a power of 2 */
 #define LEM_THREADTABLE 1
 
@@ -58,7 +62,6 @@ struct lem_runqueue {
 	unsigned long last;
 	unsigned long mask;
 	struct lem_runqueue_slot *queue;
-	int status;
 };
 
 #if EV_MULTIPLICITY
@@ -66,11 +69,12 @@ struct ev_loop *lem_loop;
 #endif
 static lua_State *L;
 static struct lem_runqueue rq;
+static int exit_status = EXIT_SUCCESS;
 
-static
-void oom(void)
+static void
+oom(void)
 {
-	static const char e[] = "Out of memory\n";
+	static const char e[] = "out of memory\n";
 	
 	fprintf(stderr, e);
 #ifdef SIGQUIT
@@ -150,6 +154,13 @@ lem_sethandler(lua_State *T)
 }
 
 void
+lem_exit(int status)
+{
+	exit_status = status;
+	ev_unloop(LEM_ EVUNLOOP_ALL);
+}
+
+void
 lem_queue(lua_State *T, int nargs)
 {
 	struct lem_runqueue_slot *slot;
@@ -211,7 +222,6 @@ runqueue_pop(EV_P_ struct ev_idle *w, int revents)
 
 	lem_debug("running thread...");
 
-
 	slot = &rq.queue[rq.first];
 	T = slot->T;
 	nargs = slot->nargs;
@@ -220,10 +230,13 @@ runqueue_pop(EV_P_ struct ev_idle *w, int revents)
 	rq.first &= rq.mask;
 
 	/* run Lua thread */
+#if LUA_VERSION_NUM >= 502
 	switch (lua_resume(T, NULL, nargs)) {
-	case 0: /* thread finished successfully */
+#else
+	switch (lua_resume(T, nargs)) {
+#endif
+	case LUA_OK: /* thread finished successfully */
 		lem_debug("thread finished successfully");
-
 		lem_forgetthread(T);
 		return;
 
@@ -233,8 +246,10 @@ runqueue_pop(EV_P_ struct ev_idle *w, int revents)
 
 	case LUA_ERRERR: /* error running error handler */
 		lem_debug("thread errored while running error handler");
+#if LUA_VERSION_NUM >= 502
 	case LUA_ERRGCMM:
 		lem_debug("error in __gc metamethod");
+#endif
 	case LUA_ERRRUN: /* runtime error */
 		lem_debug("thread errored");
 
@@ -263,33 +278,19 @@ runqueue_pop(EV_P_ struct ev_idle *w, int revents)
 			return;
 		}
 		lem_debug("no error handler");
-
 		/* move error message to L */
 		lua_xmove(T, L, 1);
-
-		rq.status = EXIT_FAILURE;
-		ev_unloop(EV_A_ EVUNLOOP_ALL);
-		return;
+		break;
 
 	case LUA_ERRMEM: /* out of memory */
-		return oom();
+		oom();
 
 	default: /* this shouldn't happen */
 		lem_debug("lua_resume: unknown error");
-
 		lua_pushliteral(L, "unknown error");
-		rq.status = EXIT_FAILURE;
-		ev_unloop(EV_A_ EVUNLOOP_ALL);
-		return;
+		break;
 	}
-}
-
-void
-lem_exit(int status)
-{
-	rq.status = status;
-
-	ev_unloop(LEM_ EVUNLOOP_ALL);
+	lem_exit(EXIT_FAILURE);
 }
 
 static int
@@ -299,7 +300,7 @@ queue_file(int argc, char *argv[], int fidx)
 	int i;
 
 	switch (luaL_loadfile(T, argv[fidx])) {
-	case 0: /* success */
+	case LUA_OK: /* success */
 		break;
 
 	case LUA_ERRMEM:
@@ -360,7 +361,6 @@ main(int argc, char *argv[])
 			* sizeof(struct lem_runqueue_slot));
 	rq.first = rq.last = 0;
 	rq.mask = LEM_INITIAL_QUEUESIZE - 1;
-	rq.status = EXIT_SUCCESS;
 
 	/* load file */
 	if (queue_file(argc, argv, 1))
@@ -383,8 +383,8 @@ main(int argc, char *argv[])
 
 	/* close default loop */
 	ev_default_destroy();
-	lem_debug("Bye o/");
-	return rq.status;
+	lem_debug("Bye %s", exit_status == EXIT_SUCCESS ? "o/" : ":(");
+	return exit_status;
 
 error:
 	if (L)
