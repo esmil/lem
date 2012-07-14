@@ -159,7 +159,7 @@ lem_queue(lua_State *T, int nargs)
 	              nargs, nargs == 1 ? "" : "s");
 
 	if (rq.first == rq.last)
-		ev_idle_start(EV_G_ &rq.w);
+		ev_idle_start(LEM_ &rq.w);
 
 	slot = &rq.queue[rq.last];
 	slot->T = T;
@@ -289,7 +289,7 @@ lem_exit(int status)
 {
 	rq.status = status;
 
-	ev_unloop(EV_G_ EVUNLOOP_ALL);
+	ev_unloop(LEM_ EVUNLOOP_ALL);
 }
 
 static int
@@ -355,7 +355,7 @@ main(int argc, char *argv[])
 
 	/* initialize runqueue */
 	ev_idle_init(&rq.w, runqueue_pop);
-	ev_idle_start(EV_G_ &rq.w);
+	ev_idle_start(LEM_ &rq.w);
 	rq.queue = lem_xmalloc(LEM_INITIAL_QUEUESIZE
 			* sizeof(struct lem_runqueue_slot));
 	rq.first = rq.last = 0;
@@ -367,7 +367,7 @@ main(int argc, char *argv[])
 		goto error;
 
 	/* start the mainloop */
-	ev_loop(EV_G_ 0);
+	ev_loop(LEM_ 0);
 	lem_debug("event loop exited");
 
 	/* if there is an error message left on L print it */

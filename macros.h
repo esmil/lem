@@ -38,9 +38,9 @@
 #endif
 
 #if EV_MULTIPLICITY
-# define EV_G lem_loop
-# define EV_G_ EV_G,
+# define LEM lem_loop
+# define LEM_ LEM,
 #else
-# define EV_G
-# define EV_G_
+# define LEM
+# define LEM_
 #endif

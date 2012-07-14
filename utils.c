@@ -35,7 +35,7 @@ sleeper_wakeup(lua_State *T)
 		return 2;
 	}
 
-	ev_timer_stop(EV_G_ w);
+	ev_timer_stop(LEM_ w);
 
 	nargs = lua_gettop(T) - 1;
 	lua_settop(S, 0);
@@ -87,7 +87,7 @@ sleeper_sleep(lua_State *T)
 		}
 
 		ev_timer_set(w, delay, 0);
-		ev_timer_start(EV_G_ w);
+		ev_timer_start(LEM_ w);
 	}
 
 	w->data = T;
@@ -130,7 +130,7 @@ timer_cancel(lua_State *T)
 		return 2;
 	}
 
-	ev_timer_stop(EV_G_ w);
+	ev_timer_stop(LEM_ w);
 	lem_forgetthread(S);
 
 	/* return true */
@@ -178,7 +178,7 @@ timer_new(lua_State *T)
 		lua_xmove(T, S, 1);
 
 		ev_timer_init(w, timer_handler, delay, 0);
-		ev_timer_start(EV_G_ w);
+		ev_timer_start(LEM_ w);
 	} else {
 		w->data = NULL;
 
