@@ -1,19 +1,19 @@
 /*
  * libev solaris event port backend
  *
- * Copyright (c) 2007,2008,2009,2010 Marc Alexander Lehmann <libev@schmorp.de>
+ * Copyright (c) 2007,2008,2009,2010,2011 Marc Alexander Lehmann <libev@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
  * tion, are permitted provided that the following conditions are met:
- * 
+ *
  *   1.  Redistributions of source code must retain the above copyright notice,
  *       this list of conditions and the following disclaimer.
- * 
+ *
  *   2.  Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MER-
  * CHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
@@ -147,9 +147,15 @@ port_init (EV_P_ int flags)
 
   fcntl (backend_fd, F_SETFD, FD_CLOEXEC); /* not sure if necessary, hopefully doesn't hurt */
 
-  backend_fudge  = 1e-3; /* needed to compensate for port_getn returning early */
-  backend_modify = port_modify;
-  backend_poll   = port_poll;
+  /* if my reading of the opensolaris kernel sources are correct, then
+   * opensolaris does something very stupid: it checks if the time has already
+   * elapsed and doesn't round up if that is the case,m otherwise it DOES round
+   * up. Since we can't know what the case is, we need to guess by using a
+   * "large enough" timeout. Normally, 1e-9 would be correct.
+   */
+  backend_mintime = 1e-3; /* needed to compensate for port_getn returning early */
+  backend_modify  = port_modify;
+  backend_poll    = port_poll;
 
   port_eventmax = 64; /* initial number of events receivable per poll */
   port_events = (port_event_t *)ev_malloc (sizeof (port_event_t) * port_eventmax);

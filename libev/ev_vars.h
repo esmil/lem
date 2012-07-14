@@ -6,14 +6,14 @@
  *
  * Redistribution and use in source and binary forms, with or without modifica-
  * tion, are permitted provided that the following conditions are met:
- * 
+ *
  *   1.  Redistributions of source code must retain the above copyright notice,
  *       this list of conditions and the following disclaimer.
- * 
+ *
  *   2.  Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MER-
  * CHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
@@ -51,7 +51,7 @@ VARx(int, activecnt) /* total number of active events ("refcount") */
 VARx(EV_ATOMIC_T, loop_done)  /* signal by ev_break */
 
 VARx(int, backend_fd)
-VARx(ev_tstamp, backend_fudge) /* assumed typical timer resolution */
+VARx(ev_tstamp, backend_mintime) /* assumed typical timer resolution */
 VAR (backend_modify, void (*backend_modify)(EV_P_ int fd, int oev, int nev))
 VAR (backend_poll  , void (*backend_poll)(EV_P_ ev_tstamp timeout))
 
@@ -73,6 +73,8 @@ VARx(int, evfd)
 #endif
 VAR (evpipe, int evpipe [2])
 VARx(ev_io, pipe_w)
+VARx(EV_ATOMIC_T, pipe_write_wanted)
+VARx(EV_ATOMIC_T, pipe_write_skipped)
 
 #if !defined(_WIN32) || EV_GENWRAP
 VARx(pid_t, curpid)
@@ -180,7 +182,6 @@ VAR (fs_hash, ANFS fs_hash [EV_INOTIFY_HASHSIZE])
 #endif
 
 VARx(EV_ATOMIC_T, sig_pending)
-VARx(int, nosigmask)
 #if EV_USE_SIGNALFD || EV_GENWRAP
 VARx(int, sigfd)
 VARx(ev_io, sigfd_w)

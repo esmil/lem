@@ -1,19 +1,19 @@
 /*
  * libev kqueue backend
  *
- * Copyright (c) 2007,2008,2009,2010 Marc Alexander Lehmann <libev@schmorp.de>
+ * Copyright (c) 2007,2008,2009,2010,2011 Marc Alexander Lehmann <libev@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
  * tion, are permitted provided that the following conditions are met:
- * 
+ *
  *   1.  Redistributions of source code must retain the above copyright notice,
  *       this list of conditions and the following disclaimer.
- * 
+ *
  *   2.  Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MER-
  * CHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
@@ -103,12 +103,12 @@ kqueue_poll (EV_P_ ev_tstamp timeout)
   kqueue_changecnt = 0;
 
   if (expect_false (res < 0))
-    { 
+    {
       if (errno != EINTR)
         ev_syserr ("(libev) kevent");
 
       return;
-    } 
+    }
 
   for (i = 0; i < res; ++i)
     {
@@ -161,9 +161,9 @@ kqueue_init (EV_P_ int flags)
 
   fcntl (backend_fd, F_SETFD, FD_CLOEXEC); /* not sure if necessary, hopefully doesn't hurt */
 
-  backend_fudge  = 0.;
-  backend_modify = kqueue_modify;
-  backend_poll   = kqueue_poll;
+  backend_mintime = 1e-9; /* apparently, they did the right thing in freebsd */
+  backend_modify  = kqueue_modify;
+  backend_poll    = kqueue_poll;
 
   kqueue_eventmax = 64; /* initial number of events receivable per poll */
   kqueue_events = (struct kevent *)ev_malloc (sizeof (struct kevent) * kqueue_eventmax);
