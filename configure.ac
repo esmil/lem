@@ -90,7 +90,7 @@ AS_CASE(["x$with_lua"],
 AS_IF([test "x$with_lua" = 'xbuiltin'],
   [AC_CHECK_LIB([m], [sin])]
   [AC_SEARCH_LIBS([dlopen], [dl])]
-  [objects="lua/amalg.o $objects"]
+  [objects="lua.o $objects"]
   [headers="lua/luaconf.h lua/lua.h lua/lauxlib.h $headers"]
   [CPPFLAGS="$CPPFLAGS -Ilua"]
   [AS_IF([test "x$lmoddir" = 'x'], [lmoddir="\${datarootdir}/lua/$builtin_lua_version"])]

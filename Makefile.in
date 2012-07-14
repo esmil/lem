@@ -43,7 +43,7 @@ endif
 all: $(programs) lem.pc
 
 libev.o: CFLAGS += -w
-lua/amalg.o: CFLAGS += -DLUA_USE_LINUX -DLUA_ROOT='"$(prefix)/"'
+lua.o: lua/luaconf.h
 
 %.o: %.c
 	$E '  CC    $@'
@@ -56,6 +56,13 @@ lem: $(objects)
 %.so: %.c
 	$E '  CCLD  $@'
 	$Q$(CC) $(CFLAGS) -fPIC -nostartfiles $(SHARED) $^ -o $@ $(LDFLAGS)
+
+lua/luaconf.h: lua/luaconf.h.in
+	$E '  SED > $@'
+	$Q$(SED) \
+	  -e 's|@path@|$(lua_path)|' \
+	  -e 's|@cpath@|$(lua_cpath)|' \
+	  $< > $@
 
 %.pc: %.pc.in
 	$E '  SED > $@'
@@ -102,4 +109,4 @@ lem-repl-install: lem-repl | $(bindir)
 install: lem.pc-install $(headers:%=%-install) $(programs:%=%-install) $(scripts:%=%-install)
 
 clean:
-	rm -f $(programs) lem.pc *.o lua/*.o
+	rm -f lem lua/luaconf.h lem.pc *.o *.so

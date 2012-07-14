@@ -4,6 +4,7 @@
 config.status
 config.log
 Makefile
+lua/luaconf.h
 libev/ev-config.h
 lem.pc
 lem
