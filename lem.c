@@ -23,14 +23,9 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "config.h"
+#include "lem.h"
 
-#include "lua/lua.h"
-#include "lua/lualib.h"
-#include "lua/lauxlib.h"
-
-#include "libev/ev.h"
-#include "macros.h"
+#include <lualib.h>
 
 #if EV_USE_KQUEUE
 #define LEM_LOOPFLAGS EVBACKEND_KQUEUE
@@ -371,9 +366,8 @@ main(int argc, char *argv[])
 	lem_debug("event loop exited");
 
 	/* if there is an error message left on L print it */
-	if (lua_type(L, -1) == LUA_TSTRING) {
+	if (lua_type(L, -1) == LUA_TSTRING)
 		lem_log_error("%s", lua_tostring(L, -1));
-	}
 
 	/* shutdown Lua */
 	lua_close(L);

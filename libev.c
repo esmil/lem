@@ -1,6 +1,6 @@
 /*
  * This file is part of LEM, a Lua Event Machine.
- * Copyright 2011 Emil Renner Berthing
+ * Copyright 2011-2012 Emil Renner Berthing
  *
  * LEM is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -16,26 +16,5 @@
  * along with LEM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define EV_STANDALONE        1
-#define EV_USE_MONOTONIC     1
-#define EV_USE_CLOCK_SYSCALL 0
-#define EV_USE_NANOSLEEP     1
-#define EV_USE_EVENTFD       0
-
-#define EV_USE_SELECT        0
-#define EV_USE_POLL          0
-#define EV_USE_EPOLL         0
-#define EV_USE_KQUEUE        1
-#define EV_USE_PORT          0
-
-#define EV_MULTIPLICITY      0
-
-#define EV_PERIODIC_ENABLE   0
-#define EV_IDLE_ENABLE       1
-#define EV_EMBED_ENABLE      0
-#define EV_STAT_ENABLE       0
-#define EV_FORK_ENABLE       0
-#define EV_ASYNC_ENABLE      1
-
-#define EV_MINPRI            0
-#define EV_MAXPRI            0
+#include "libev/ev-config.h"
+#include "libev/ev.c"

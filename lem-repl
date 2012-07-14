@@ -21,9 +21,7 @@ local streams = require 'lem.streams'
 local repl    = require 'lem.repl'
 
 streams.stdout:write([[
-A Lua Event Machine 0.2  Copyright 2011-2012 Emil Renner Berthing
-Lua 5.2.0  Copyright 1994-2008 Lua.org, PUC-Rio
-libev 4.11  Copyright 2007-2011 Marc Alexander Lehmann
+A Lua Event Machine 0.3  Copyright 2011-2012 Emil Renner Berthing
 ]])
 
 repl.go('stdin', streams.stdin, streams.stdout)

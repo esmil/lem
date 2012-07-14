@@ -16,7 +16,6 @@
  * along with LEM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdlib.h>
 #include <lem.h>
 
 static int

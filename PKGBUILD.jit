@@ -1,28 +1,27 @@
 # Maintainer: Emil Renner Berthing <esmil@mailme.dk>
 
 pkgname=lem
-pkgver=0.1
+pkgver=0.3
 pkgrel=1
-pkgdesc="A Lua Event Machine"
+pkgdesc='A Lua Event Machine'
 arch=('i686' 'x86_64')
-url="https://github.com/esmil/lem"
+url='https://github.com/esmil/lem'
 license=('GPL')
 depends=('luajit2')
 optdepends=('lem-streams: for lem-repl')
 source=()
 
-_lua='/usr/bin/luajit2'
-
 build() {
   cd "$startdir"
 
-  make NDEBUG=1 LUA="$_lua"
+  ./configure --prefix=/usr --with-lua=luajit
+  make
 }
 
 package() {
   cd "$startdir"
 
-  make DESTDIR="$pkgdir/" PREFIX='/usr' LUA="$_lua" install
+  make DESTDIR="$pkgdir/" install
 }
 
 # vim:set ts=2 sw=2 et:

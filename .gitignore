@@ -1,8 +1,14 @@
 *.o
+*.lo
 *.so
+config.status
+config.log
+Makefile
+libev/ev-config.h
+lem.pc
+lem
+aclocal.m4
+autom4te.cache
 *.pkg.tar.*
 src/
 pkg/
-config.h
-lem.pc
-lem

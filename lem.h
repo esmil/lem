@@ -19,14 +19,38 @@
 #ifndef _LEM_H
 #define _LEM_H
 
-#include <lem/config.h>
-#include <lem/ev.h>
+#include <ev.h>
 #include <lua.h>
 #include <lauxlib.h>
-#include <lem/macros.h>
+
+/* Support gcc's __FUNCTION__ for people using other compilers */
+#if !defined(__GNUC__) && !defined(__FUNCTION__)
+# define __FUNCTION__ __func__ /* C99 */
+#endif
+
+#ifdef NDEBUG
+#define lem_debug(...)
+#else
+#define lem_debug(fmt, ...) do { \
+	printf("%s (%s:%u): " fmt "\n", \
+		__FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__); \
+	fflush(stdout); } while (0)
+#endif
+
+#if EV_MINPRI == EV_MAXPRI
+# undef ev_priority
+# undef ev_set_priority
+# define ev_priority(pri)
+# define ev_set_priority(ev, pri)
+#endif
 
 #if EV_MULTIPLICITY
 extern struct ev_loop *lem_loop;
+# define LEM lem_loop
+# define LEM_ LEM,
+#else
+# define LEM
+# define LEM_
 #endif
 
 void *lem_xmalloc(size_t size);

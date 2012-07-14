@@ -50,6 +50,8 @@ EV_CPP(extern "C" {)
 
 /*****************************************************************************/
 
+#include "ev-config.h"
+
 /* pre-4.0 compatibility */
 #ifndef EV_COMPAT3
 # define EV_COMPAT3 1
