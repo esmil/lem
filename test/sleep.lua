@@ -1,4 +1,4 @@
-#!./lem
+#!bin/lem
 --
 -- This file is part of LEM, a Lua Event Machine.
 -- Copyright 2011-2012 Emil Renner Berthing
@@ -17,27 +17,30 @@
 -- along with LEM.  If not, see <http://www.gnu.org/licenses/>.
 --
 
-package.path  = package.path  .. ';../?.lua'
-package.cpath = package.cpath .. ';../?.so'
-
-print 'Entered test.lua'
-
 local utils = require 'lem.utils'
 
-local function sleep(n)
-   utils.sleeper():sleep(n)
+local sum, coros, n = 0, 0, 0
+local done = utils.sleeper()
+
+local function test(t)
+	local sleeper = utils.sleeper()
+	local diff = utils.now()
+	sleeper:sleep(t)
+	diff = utils.now() - diff
+
+	print(string.format('%fs, %fms off', diff, 1000*(diff - t)))
+	sum = sum + math.abs(diff - t)
+	n = n + 1
+	if n == coros then done:wakeup() end
 end
 
-print 'Saying "Fee!" in 1 second'
-utils.timer(1, function() print 'Fee!' end)
+for t = 0, 3, 0.1 do
+	coros = coros + 1
+	utils.spawn(test, t)
+end
 
-print 'Saying "Fo!" in 3 seconds'
-utils.timer(3, function() print 'Fo!' end)
+done:sleep()
 
-utils.spawn(function()
-   print 'Sleeping for 2 seconds, then saying  "Fi!" before the script ends'
-   sleep(2)
-   print 'Fi!'
-end)
+print(string.format('%fms off on average', 1000*sum / n))
 
--- vim: syntax=lua ts=3 sw=3 et:
+-- vim: syntax=lua ts=2 sw=2 noet:

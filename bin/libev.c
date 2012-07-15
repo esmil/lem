@@ -16,5 +16,5 @@
  * along with LEM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "libev/ev-config.h"
-#include "libev/ev.c"
+#include "../libev/ev-config.h"
+#include "../libev/ev.c"

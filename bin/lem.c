@@ -23,8 +23,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "lem.h"
-
+#include <lem.h>
 #include <lualib.h>
 
 #if EV_USE_KQUEUE

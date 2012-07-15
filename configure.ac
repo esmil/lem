@@ -5,9 +5,9 @@ builtin_lua_version='5.2'
 AC_LANG(C)
 AC_CONFIG_HEADERS([libev/ev-config.h:ev-config.h.in])
 
-AC_SUBST([headers], ['lem.h'])
-AC_SUBST([objects], ['lem.o'])
-AC_SUBST([SHARED])
+AC_SUBST([headers], ['lem.h streams.h'])
+AC_SUBST([objects], ['bin/lem.o'])
+AC_SUBST([SHARED], ['-shared'])
 
 AC_ARG_WITH([debug],
   [AS_HELP_STRING([--with-debug],
@@ -49,8 +49,7 @@ AS_CASE(["x$target_os"],
   [xdarwin*],
   [ac_cv_func_kqueue=no] # kqueue seems to be broken on OSX
   [SHARED='-dynamiclib -Wl,-undefined,dynamic_lookup']
-  [STRIP="$STRIP -x"],
-  [SHARED='-shared'])
+  [STRIP="$STRIP -x"])
 
 # Checks for Lua.
 AS_CASE(["x$with_lua"],
@@ -90,8 +89,8 @@ AS_CASE(["x$with_lua"],
 AS_IF([test "x$with_lua" = 'xbuiltin'],
   [AC_CHECK_LIB([m], [sin])]
   [AC_SEARCH_LIBS([dlopen], [dl])]
-  [objects="lua.o $objects"]
-  [headers="lua/luaconf.h lua/lua.h lua/lauxlib.h $headers"]
+  [objects="bin/lua.o $objects"]
+  [headers="luaconf.h lua.h lauxlib.h $headers"]
   [CPPFLAGS="$CPPFLAGS -Ilua"]
   [AS_IF([test "x$lmoddir" = 'x'], [lmoddir="\${datarootdir}/lua/$builtin_lua_version"])]
   [AS_IF([test "x$cmoddir" = 'x'], [cmoddir="\${libdir}/lua/$builtin_lua_version"])])
@@ -109,8 +108,8 @@ AC_CHECK_HEADERS([sys/eventfd.h sys/epoll.h sys/event.h])
 #])],
 #    [echo "conftest returned: `cat conftest.out`"],[])])
 
-objects="libev.o $objects"
-headers="libev/ev-config.h libev/ev.h $headers"
+objects="bin/libev.o $objects"
+headers="ev-config.h ev.h $headers"
 CPPFLAGS="$CPPFLAGS -Ilibev"
 
 AS_IF([test "x$ac_cv_header_sys_eventfd_h" = 'xyes'],

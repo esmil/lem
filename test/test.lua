@@ -1,4 +1,4 @@
-#!./lem
+#!bin/lem
 --
 -- This file is part of LEM, a Lua Event Machine.
 -- Copyright 2011-2012 Emil Renner Berthing
@@ -16,9 +16,6 @@
 -- You should have received a copy of the GNU General Public License
 -- along with LEM.  If not, see <http://www.gnu.org/licenses/>.
 --
-
-package.path  = package.path  .. ';../?.lua'
-package.cpath = package.cpath .. ';../?.so'
 
 local utils = require 'lem.utils'
 

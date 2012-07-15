@@ -1,13 +1,12 @@
 *.o
-*.lo
 *.so
-config.status
-config.log
-Makefile
+bin/lem
 lua/luaconf.h
 libev/ev-config.h
 lem.pc
-lem
+config.status
+config.log
+Makefile
 aclocal.m4
 autom4te.cache
 *.pkg.tar.*

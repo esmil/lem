@@ -1,20 +1,12 @@
 CC           = @CC@
 CFLAGS      ?= @CFLAGS@
-CFLAGS      += -I. @CPPFLAGS@
+CFLAGS      += -Iinclude @CPPFLAGS@
 SHARED       = @SHARED@
 
 PKG_CONFIG   = @PKG_CONFIG@
 STRIP        = @STRIP@
 INSTALL      = @INSTALL@
 SED          = @SED@
-
-headers      = @headers@
-programs     = lem utils.so
-scripts      = repl.lua lem-repl
-
-objects      = @objects@
-
-LIBS         = @LIBS@
 
 prefix       = @prefix@
 exec_prefix  = @exec_prefix@
@@ -26,8 +18,22 @@ pkgconfigdir = @pkgconfigdir@
 lmoddir      = @lmoddir@
 cmoddir      = @cmoddir@
 
-installdirs  = $(bindir) $(includedir)/lem \
-               $(lmoddir)/lem $(cmoddir)/lem $(pkgconfigdir)
+objects      = @objects@
+LIBS         = @LIBS@
+
+headers      = @headers@
+
+llibs = \
+	lem/repl.lua \
+	lem/streams.lua \
+	lem/streams/queue.lua \
+	lem/http.lua \
+	lem/hathaway.lua
+
+clibs = \
+	lem/utils.so \
+	lem/streams/core.so \
+	lem/http/core.so
 
 ifdef V
 E=@\#
@@ -37,19 +43,18 @@ E=@echo
 Q=@
 endif
 
-.PHONY: all strip install clean $(installdirs)
-.PRECIOUS: %.lo
+.PHONY: all strip install clean
 
-all: $(programs) lem.pc
+all: bin/lem lem.pc $(clibs)
 
-libev.o: CFLAGS += -w
-lua.o: lua/luaconf.h
+bin/libev.o: CFLAGS += -w
+bin/lua.o: lua/luaconf.h
 
 %.o: %.c
 	$E '  CC    $@'
 	$Q$(CC) $(CFLAGS) -c $< -o $@
 
-lem: $(objects)
+bin/lem: $(objects)
 	$E '  LD    $@'
 	$Q$(CC) $^ -o $@ -rdynamic $(LDFLAGS) $(LIBS)
 
@@ -60,11 +65,11 @@ lem: $(objects)
 lua/luaconf.h: lua/luaconf.h.in
 	$E '  SED > $@'
 	$Q$(SED) \
-	  -e 's|@path@|$(lua_path)|' \
-	  -e 's|@cpath@|$(lua_cpath)|' \
+	  -e 's|@lmoddir[@]|$(lmoddir)|' \
+	  -e 's|@cmoddir[@]|$(cmoddir)|' \
 	  $< > $@
 
-%.pc: %.pc.in
+lem.pc: lem.pc.in
 	$E '  SED > $@'
 	$Q$(SED) \
 	  -e 's|@lmoddir[@]|$(lmoddir)|' \
@@ -76,37 +81,40 @@ lua/luaconf.h: lua/luaconf.h.in
 	$E '  STRIP $<'
 	$Q$(STRIP) $(STRIP_ARGS) $<
 
-strip: $(programs:%=%-strip)
+strip: bin/lem-strip $(clibs:%=%-strip)
 
-$(installdirs):
-	$E '  INSTALL -d $@'
-	$Q$(INSTALL) -dm755 $(DESTDIR)$@
+$(DESTDIR)$(bindir)/%: bin/%
+	$E '  INSTALL $@'
+	$Q$(INSTALL) -d $(dir $@)
+	$Q$(INSTALL) -m 755 $< $@
 
-lem-install: lem | $(bindir)
-	$E '  INSTALL $<'
-	$Q$(INSTALL) $< $(DESTDIR)$(bindir)/$<
+$(DESTDIR)$(includedir)/lem/%: lua/%
+	$E '  INSTALL $@'
+	$Q$(INSTALL) -d $(dir $@)
+	$Q$(INSTALL) -m 644 $< $@
 
-lem-repl-install: lem-repl | $(bindir)
-	$E '  INSTALL $<'
-	$Q$(INSTALL) $< $(DESTDIR)$(bindir)/$<
+$(DESTDIR)$(includedir)/lem/%: libev/%
+	$E '  INSTALL $@'
+	$Q$(INSTALL) -d $(dir $@)
+	$Q$(INSTALL) -m 644 $< $@
 
-%.h-install: %.h | $(includedir)/lem
-	$E '  INSTALL $(notdir $<)'
-	$Q$(INSTALL) -m644 $< $(DESTDIR)$(includedir)/lem/$(notdir $<)
+$(DESTDIR)$(includedir)/lem/%: include/%
+	$E '  INSTALL $@'
+	$Q$(INSTALL) -d $(dir $@)
+	$Q$(INSTALL) -m 644 $< $@
 
-%.lua-install: %.lua | $(lmoddir)/lem
-	$E '  INSTALL $<'
-	$Q$(INSTALL) -m644 $< $(DESTDIR)$(lmoddir)/lem/$<
+$(DESTDIR)$(lmoddir)/% $(DESTDIR)$(cmoddir)/% $(DESTDIR)$(pkgconfigdir)/%: %
+	$E '  INSTALL $@'
+	$Q$(INSTALL) -d $(dir $@)
+	$Q$(INSTALL) -m 644 $< $@
 
-%.so-install: %.so | $(cmoddir)/lem
-	$E '  INSTALL $<'
-	$Q$(INSTALL) $< $(DESTDIR)$(cmoddir)/lem/$<
-
-%.pc-install: %.pc | $(pkgconfigdir)
-	$E '  INSTALL $<'
-	$Q$(INSTALL) -m644 $< $(DESTDIR)$(pkgconfigdir)
-
-install: lem.pc-install $(headers:%=%-install) $(programs:%=%-install) $(scripts:%=%-install)
+install: \
+	$(DESTDIR)$(pkgconfigdir)/lem.pc \
+	$(DESTDIR)$(bindir)/lem \
+	$(DESTDIR)$(bindir)/lem-repl \
+	$(headers:%=$(DESTDIR)$(includedir)/lem/%) \
+	$(llibs:%=$(DESTDIR)$(lmoddir)/%) \
+	$(clibs:%=$(DESTDIR)$(cmoddir)/%)
 
 clean:
-	rm -f lem lua/luaconf.h lem.pc *.o *.so
+	rm -f bin/lem bin/*.o $(clibs) lua/luaconf.h lem.pc
