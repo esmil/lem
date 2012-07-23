@@ -198,8 +198,16 @@ runqueue_pop(EV_P_ struct ev_idle *w, int revents)
 	(void)revents;
 
 	if (rq.first == rq.last) { /* queue is empty */
-		lem_debug("runqueue is empty");
+		lem_debug("runqueue is empty, collecting..");
+#if 0
+		if (lua_gc(L, LUA_GCSTEP, 0)) {
+			lem_debug("done collecting");
+			ev_idle_stop(EV_A_ w);
+		}
+#else
 		ev_idle_stop(EV_A_ w);
+		lua_gc(L, LUA_GCCOLLECT, 0);
+#endif
 		return;
 	}
 
