@@ -16,6 +16,7 @@
  * along with LEM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <sys/time.h>
 #include <lem.h>
 
 static int
@@ -191,6 +192,22 @@ resume(lua_State *T)
 	return 0;
 }
 
+static int
+now_lua(lua_State *L)
+{
+	struct timeval tp;
+	lua_Number ret;
+
+	(void)gettimeofday(&tp, NULL);
+
+	ret = (lua_Number)tp.tv_usec;
+	ret /= 1.0e6;
+	ret += (lua_Number)tp.tv_sec;
+
+	lua_pushnumber(L, ret);
+	return 1;
+}
+
 int
 luaopen_lem_utils(lua_State *L)
 {
@@ -238,6 +255,10 @@ luaopen_lem_utils(lua_State *L)
 	/* set resume function */
 	lua_pushcfunction(L, resume);
 	lua_setfield(L, -2, "resume");
+
+	/* set now function */
+	lua_pushcfunction(L, now_lua);
+	lua_setfield(L, -2, "now");
 
 	return 1;
 }

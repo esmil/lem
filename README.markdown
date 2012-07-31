@@ -112,6 +112,10 @@ This sets `utils` to a table with the following functions.
   If `status` is supplied this will be the exit status of program, otherwise
   `EXIT_SUCCESS` is used.
 
+* __utils.now()__
+
+  Return the number of seconds since the epoch (1970-01-01 UTC).
+
 * __utils.sleeper()__
 
   This function returns a new sleeper object.
