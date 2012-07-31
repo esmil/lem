@@ -143,20 +143,6 @@ This sets `utils` to a table with the following functions.
   Returns `true` on succes and `nil, 'not sleeping'` if no coroutine is
   currently sleeping on the object.
 
-* __utils.timer(seconds, func)__
-
-  This method will schedule the function `func` to be run in a new coroutine
-  after `seconds` seconds and return a new timer object.
-
-  If `seconds` is zero or negative this method shall behave as `utils.spawn()`
-  except it will still return a timer object.
-
-* __timer:cancel()__
-
-  This method cancels the timer.
-  Returns `true` on success and `nil, 'expired'` if the coroutine has already
-  been scheduled to run.
-
 
 The Stream Library
 ------------------

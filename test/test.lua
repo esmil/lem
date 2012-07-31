@@ -23,11 +23,18 @@ local function sleep(n)
   utils.sleeper():sleep(n)
 end
 
+local function timer(n, f, ...)
+   utils.spawn(function(...)
+      sleep(n)
+      return f(...)
+   end, ...)
+end
+
 --print('package.cpath = ', package.cpath)
 
 print 'Saying booh in 2.5 seconds'
 
-utils.timer(2.5, function() print 'Booh!' end)
+timer(2.5, function() print 'Booh!' end)
 
 print 'Sleeping 5 seconds'
 

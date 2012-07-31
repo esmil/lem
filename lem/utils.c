@@ -115,79 +115,6 @@ sleeper_new(lua_State *T)
 }
 
 static int
-timer_cancel(lua_State *T)
-{
-	struct ev_timer *w;
-	lua_State *S;
-
-	luaL_checktype(T, 1, LUA_TUSERDATA);
-	w = lua_touserdata(T, 1);
-	S = w->data;
-	if (S == NULL) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "expired");
-		return 2;
-	}
-
-	ev_timer_stop(LEM_ w);
-	lem_forgetthread(S);
-
-	/* return true */
-	lua_pushboolean(T, 1);
-	return 1;
-}
-
-static void
-timer_handler(EV_P_ struct ev_timer *w, int revents)
-{
-	lua_State *T = w->data;
-
-	(void)revents;
-
-	lua_settop(T, 1);
-	lem_queue(T, 0);
-
-	/* mark this timer as expired */
-	w->data = NULL;
-}
-
-static int
-timer_new(lua_State *T)
-{
-	ev_tstamp delay = (ev_tstamp)luaL_checknumber(T, 1);
-	struct ev_timer *w;
-	lua_State *S;
-
-	luaL_checktype(T, 2, LUA_TFUNCTION);
-
-	S = lem_newthread();
-	lua_settop(T, 2);
-	lua_xmove(T, S, 1);
-
-	/* create new timer object and set metatable */
-	w = lua_newuserdata(T, sizeof(struct ev_timer));
-	lua_pushvalue(T, lua_upvalueindex(1));
-	lua_setmetatable(T, -2);
-
-	if (delay > 0) {
-		w->data = S;
-
-		/* push a reference of w to S */
-		lua_pushvalue(T, -1);
-		lua_xmove(T, S, 1);
-
-		ev_timer_init(w, timer_handler, delay, 0);
-		ev_timer_start(LEM_ w);
-	} else {
-		w->data = NULL;
-
-		lem_queue(S, 0);
-	}
-
-	return 1;
-}
-
-static int
 spawn(lua_State *T)
 {
 	lua_State *S;
@@ -231,9 +158,7 @@ static int
 exit_lua(lua_State *T)
 {
 	int status = (int)luaL_checknumber(T, 1);
-
 	lem_exit(status);
-
 	return 0;
 }
 
@@ -287,18 +212,6 @@ luaopen_lem_utils(lua_State *L)
 	/* set sleeper function */
 	lua_pushcclosure(L, sleeper_new, 1);
 	lua_setfield(L, -2, "sleeper");
-
-	/* create new timer metatable */
-	lua_newtable(L);
-	/* mt.__index = mt */
-	lua_pushvalue(L, -1);
-	lua_setfield(L, -2, "__index");
-	/* mt.cancel = <timer_cancel> */
-	lua_pushcfunction(L, timer_cancel);
-	lua_setfield(L, -2, "cancel");
-	/* set timer function */
-	lua_pushcclosure(L, timer_new, 1);
-	lua_setfield(L, -2, "timer");
 
 	/* set spawn function */
 	lua_pushcfunction(L, spawn);

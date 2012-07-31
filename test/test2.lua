@@ -26,15 +26,19 @@ local function sleep(n)
 end
 
 print 'Saying "Fee!" in 1 second'
-utils.timer(1, function() print 'Fee!' end)
+utils.spawn(function()
+   sleep(1)
+   print 'Fee!'
+end)
 
 print 'Saying "Fo!" in 3 seconds'
-utils.timer(3, function() print 'Fo!' end)
-
 utils.spawn(function()
-   print 'Sleeping for 2 seconds, then saying  "Fi!" before the script ends'
-   sleep(2)
-   print 'Fi!'
+   sleep(3)
+   print 'Fo!'
 end)
+
+print 'Sleeping for 2 seconds, then saying  "Fi!" before the script ends'
+sleep(2)
+print 'Fi!'
 
 -- vim: syntax=lua ts=3 sw=3 et:
