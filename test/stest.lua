@@ -32,7 +32,7 @@ end)
 
 local ok, err = server:autospawn(function(i, o)
 	print 'Accepted a connection'
-	local sleeper = utils.sleeper()
+	local sleeper = utils.newsleeper()
 
 	while true do
 		local line, err = i:read('*l')

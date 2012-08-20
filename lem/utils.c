@@ -228,7 +228,7 @@ luaopen_lem_utils(lua_State *L)
 	lua_setfield(L, -2, "sleep");
 	/* set sleeper function */
 	lua_pushcclosure(L, sleeper_new, 1);
-	lua_setfield(L, -2, "sleeper");
+	lua_setfield(L, -2, "newsleeper");
 
 	/* set spawn function */
 	lua_pushcfunction(L, utils_spawn);

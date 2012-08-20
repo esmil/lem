@@ -20,7 +20,7 @@
 local utils = require 'lem.utils'
 
 local function sleep(n)
-  utils.sleeper():sleep(n)
+  utils.newsleeper():sleep(n)
 end
 
 local function timer(n, f, ...)

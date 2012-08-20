@@ -22,7 +22,7 @@ local streams = require 'lem.streams'
 local queue   = require 'lem.streams.queue'
 
 local exit   = false
-local ticker = utils.sleeper()
+local ticker = utils.newsleeper()
 local stdout = queue.wrap(streams.stdout)
 
 do

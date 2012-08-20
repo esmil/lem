@@ -20,10 +20,10 @@
 local utils = require 'lem.utils'
 
 local sum, coros, n = 0, 0, 0
-local done = utils.sleeper()
+local done = utils.newsleeper()
 
 local function test(t)
-	local sleeper = utils.sleeper()
+	local sleeper = utils.newsleeper()
 	local diff = utils.now()
 	sleeper:sleep(t)
 	diff = utils.now() - diff

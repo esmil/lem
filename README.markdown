@@ -116,7 +116,7 @@ This sets `utils` to a table with the following functions.
 
   Return the number of seconds since the epoch (1970-01-01 UTC).
 
-* __utils.sleeper()__
+* __utils.newsleeper()__
 
   This function returns a new sleeper object.
 

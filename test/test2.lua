@@ -22,7 +22,7 @@ print 'Entered test.lua'
 local utils = require 'lem.utils'
 
 local function sleep(n)
-   utils.sleeper():sleep(n)
+   utils.newsleeper():sleep(n)
 end
 
 print 'Saying "Fee!" in 1 second'
