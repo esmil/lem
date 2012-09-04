@@ -28,28 +28,28 @@ do
 	local lookup = {}
 	M.lookup = lookup
 
-	function M.GET(uri, handler)
-		local path = lookup[uri]
-		if path then
-			path['HEAD'] = handler
-			path['GET'] = handler
+	function M.GET(path, handler)
+		local entry = lookup[path]
+		if entry then
+			entry['HEAD'] = handler
+			entry['GET'] = handler
 		else
-			path = {
+			entry = {
 				['HEAD'] = handler,
 				['GET'] = handler,
 			}
-			lookup[uri] = path
+			lookup[path] = entry
 		end
 	end
 
 	do
 		local function static_setter(method)
-			return function(uri, handler)
-				local path = lookup[uri]
-				if path then
-					path[method] = handler
+			return function(path, handler)
+				local entry = lookup[path]
+				if entry then
+					entry[method] = handler
 				else
-					lookup[uri] = { [method] = handler }
+					lookup[path] = { [method] = handler }
 				end
 			end
 		end
@@ -132,11 +132,11 @@ do
 	end
 
 	local function handler(req, res)
-		local method, uri = req.method, req.uri
-		M.debug('info', format("%s %s HTTP/%s", method, uri, req.version))
-		local path = lookup[uri]
-		if path then
-			local handler = path[method]
+		local method, path = req.method, req.path
+		M.debug('info', format("%s %s HTTP/%s", method, req.uri, req.version))
+		local entry = lookup[path]
+		if entry then
+			local handler = entry[method]
 			if handler then
 				handler(req, res)
 			else
@@ -151,7 +151,7 @@ do
 					httpserv.not_found(req, res)
 					break
 				end
-			until check_match(entry, req, res, uri:match(entry[1]))
+			until check_match(entry, req, res, path:match(entry[1]))
 		end
 	end
 

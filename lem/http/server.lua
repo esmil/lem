@@ -120,6 +120,18 @@ end
 function M.debug() end
 
 do
+	local gsub, char, tonumber = string.gsub, string.char, tonumber
+
+	local function tochar(str)
+		return char(tonumber(str, 16))
+	end
+
+	function M.urldecode(str)
+		return gsub(gsub(str, '+', ' '), '%%(%x%x)', tochar)
+	end
+end
+
+do
 	local Response = {}
 	Response.__index = Response
 	M.Response = Response
@@ -148,11 +160,15 @@ do
 		return true
 	end
 
+	local urldecode = M.urldecode
+
 	local function handleHTTP(self, client)
 		repeat
 			local req, err = client:read('HTTPRequest')
 			if not req then self.debug('read', err) break end
 			local method, uri, version = req.method, req.uri, req.version
+
+			req.path = urldecode(uri:match('^([^?]*)'))
 
 			local res = new_response(req)
 
