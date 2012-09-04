@@ -12,3 +12,4 @@ autom4te.cache
 *.pkg.tar.*
 src/
 pkg/
+.*sw?
