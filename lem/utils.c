@@ -116,7 +116,7 @@ sleeper_new(lua_State *T)
 }
 
 static int
-spawn(lua_State *T)
+utils_spawn(lua_State *T)
 {
 	lua_State *S;
 	int nargs;
@@ -135,14 +135,14 @@ spawn(lua_State *T)
 }
 
 static int
-yield_lua(lua_State *T)
+utils_yield(lua_State *T)
 {
 	lem_queue(T, 0);
 	return lua_yield(T, 0);
 }
 
 static int
-sethandler_lua(lua_State *T)
+utils_sethandler(lua_State *T)
 {
 	if (lua_gettop(T) > 0) {
 		luaL_checktype(T, 1, LUA_TFUNCTION);
@@ -156,7 +156,7 @@ sethandler_lua(lua_State *T)
 }
 
 static int
-exit_lua(lua_State *T)
+utils_exit(lua_State *T)
 {
 	int status = (int)luaL_checknumber(T, 1);
 	lem_exit(status);
@@ -164,20 +164,20 @@ exit_lua(lua_State *T)
 }
 
 static int
-thisthread(lua_State *T)
+utils_thisthread(lua_State *T)
 {
 	lua_pushthread(T);
 	return 1;
 }
 
 static int
-suspend(lua_State *T)
+utils_suspend(lua_State *T)
 {
 	return lua_yield(T, 0);
 }
 
 static int
-resume(lua_State *T)
+utils_resume(lua_State *T)
 {
 	int args;
 	lua_State *S;
@@ -193,7 +193,7 @@ resume(lua_State *T)
 }
 
 static int
-now_lua(lua_State *L)
+utils_now(lua_State *L)
 {
 	struct timeval tp;
 	lua_Number ret;
@@ -231,33 +231,33 @@ luaopen_lem_utils(lua_State *L)
 	lua_setfield(L, -2, "sleeper");
 
 	/* set spawn function */
-	lua_pushcfunction(L, spawn);
+	lua_pushcfunction(L, utils_spawn);
 	lua_setfield(L, -2, "spawn");
 
 	/* set yield function */
-	lua_pushcfunction(L, yield_lua);
+	lua_pushcfunction(L, utils_yield);
 	lua_setfield(L, -2, "yield");
 
 	/* set sethandler function */
-	lua_pushcfunction(L, sethandler_lua);
+	lua_pushcfunction(L, utils_sethandler);
 	lua_setfield(L, -2, "sethandler");
 
 	/* set exit function */
-	lua_pushcfunction(L, exit_lua);
+	lua_pushcfunction(L, utils_exit);
 	lua_setfield(L, -2, "exit");
 
 	/* set thisthread function */
-	lua_pushcfunction(L, thisthread);
+	lua_pushcfunction(L, utils_thisthread);
 	lua_setfield(L, -2, "thisthread");
 	/* set suspend function */
-	lua_pushcfunction(L, suspend);
+	lua_pushcfunction(L, utils_suspend);
 	lua_setfield(L, -2, "suspend");
 	/* set resume function */
-	lua_pushcfunction(L, resume);
+	lua_pushcfunction(L, utils_resume);
 	lua_setfield(L, -2, "resume");
 
 	/* set now function */
-	lua_pushcfunction(L, now_lua);
+	lua_pushcfunction(L, utils_now);
 	lua_setfield(L, -2, "now");
 
 	return 1;
