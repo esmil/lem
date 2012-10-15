@@ -19,99 +19,79 @@
 local utils   = require 'lem.utils'
 
 local load = load
+if _VERSION == 'Lua 5.1' then
+	load = loadstring
+end
+
 local format = string.format
 local concat = table.concat
 local tostring = tostring
 local select = select
 
-local function repl(done, name, ins, outs)
-	if not outs then outs = ins end
+return {
+	repl = function(name, ins, outs)
+		name = '=' .. name
 
-	local getcode, onreturn, onerror
+		local function onreturn(ok, ...)
+			if not ok then
+				local ok, err = outs:write(format("%s\n", select(1, ...)))
+				if not ok then return nil, err end
+				return true
+			end
 
-	name = '=' .. name
+			local args = select('#', ...)
+			if args == 0 then return true end
 
-	function getcode()
-		local res, err = outs:write('> ')
-		if not res then return done(nil, err) end
+			local rstr
+			do
+				local t = { ... }
+				for i = 1, args - 1 do
+					t[i] = tostring(t[i])
+				end
+				t[args] = tostring(t[args])..'\n'
 
-		local line
-		line, err = ins:read('*l')
-		if not line then return done(nil, err) end
+				rstr = concat(t, '\t')
+			end
 
-		line = line:gsub('^=', 'return ')
+			local ok, err = outs:write(rstr)
+			if not ok then return nil, err end
+
+			return true
+		end
 
 		while true do
-			res, err = load(line, name)
-			if res then break end
-
-			if not err:match("'<eof>'") then
-				return onerror(err)
-			end
-
-			res, err = outs:write('>> ')
-			if not res then return done(nil, err) end
+			local res, err = outs:write('> ')
+			if not res then return nil, err end
 
 			res, err = ins:read('*l')
-			if not res then return done(nil, err) end
+			if not res then return nil, err end
 
-			line = line .. res
-		end
+			local line = res:gsub('^=', 'return ')
 
-		utils.sethandler(onerror)
-		return onreturn(res())
-	end
+			while true do
+				res, err = load(line, name)
+				if res then
+					res, err = onreturn(pcall(res))
+					if not res then return nil, err end
+					break
+				end
 
-	function onreturn(...)
-		utils.sethandler()
-		local args = select('#', ...)
-		if args == 0 then return getcode() end
+				if not err:match("<eof>") then
+					res, err = outs:write(format("%s\n", err))
+					if not res then return nil, err end
+					break
+				end
 
-		local rstr
-		do
-			local t, ti = { ... }, nil
-			for i = 1, args - 1 do
-				t[i] = tostring(t[i])
+				res, err = outs:write('>> ')
+				if not res then return nil, err end
+
+				res, err = ins:read('*l')
+				if not res then return nil, err end
+
+				line = line .. res
 			end
-			t[args] = tostring(t[args])..'\n'
-
-			rstr = concat(t, '\t')
 		end
-
-		local ok, err = outs:write(rstr)
-		if not ok then return done(nil, err) end
-
-		return getcode()
 	end
-
-	function onerror(err)
-		local ok, err = outs:write(format("%s\n", err))
-		if not ok then return done(nil, err) end
-
-		return getcode()
-	end
-
-	return getcode()
-end
-
-return {
-	wait = function(name, ins, outs)
-		local sleeper = utils.sleeper()
-		local function done(...)
-			return sleeper:wakeup(...)
-		end
-
-		utils.spawn(repl, done, name, ins, outs)
-
-		return sleeper:sleep()
-	end,
-
-	go = function(name, ins, outs)
-		local function done()
-			return outs:write('\n')
-		end
-		return repl(done, name, ins, outs)
-	end,
 }
 
 -- vim: ts=2 sw=2 noet:

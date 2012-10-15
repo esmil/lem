@@ -24,6 +24,7 @@ streams.stdout:write([[
 A Lua Event Machine 0.3  Copyright 2011-2012 Emil Renner Berthing
 ]])
 
-repl.go('stdin', streams.stdin, streams.stdout)
+local _, err = repl.repl('stdin', streams.stdin, streams.stdout)
+print(err or '')
 
 -- vim: syntax=lua ts=2 sw=2 noet:
