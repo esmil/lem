@@ -22,7 +22,6 @@ print('Entered ' .. arg[0])
 local utils   = require 'lem.utils'
 local streams = require 'lem.streams'
 
-local sleeper = utils.newsleeper()
 local iconn, oconn = assert(streams.tcp_connect('127.0.0.1', arg[1] or 8080))
 
 for i = 1, 10 do

@@ -25,7 +25,8 @@ local streams = require 'lem.streams'
 local server = assert(streams.tcp4_listen('*', arg[1] or 8080))
 
 --timer(10, function() exit(0) end)
-utils.timer(10, function()
+utils.spawn(function()
+	utils.newsleeper():sleep(10)
 	print 'Closing server'
 	server:close()
 end)
