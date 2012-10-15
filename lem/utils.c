@@ -193,18 +193,17 @@ utils_resume(lua_State *T)
 }
 
 static int
-utils_now(lua_State *L)
+utils_now(lua_State *T)
 {
-	struct timeval tp;
-	lua_Number ret;
+	lua_pushnumber(T, (lua_Number)ev_now());
+	return 1;
+}
 
-	(void)gettimeofday(&tp, NULL);
-
-	ret = (lua_Number)tp.tv_usec;
-	ret /= 1.0e6;
-	ret += (lua_Number)tp.tv_sec;
-
-	lua_pushnumber(L, ret);
+static int
+utils_updatenow(lua_State *T)
+{
+	ev_now_update(LEM);
+	lua_pushnumber(T, (lua_Number)ev_now());
 	return 1;
 }
 
@@ -259,6 +258,9 @@ luaopen_lem_utils(lua_State *L)
 	/* set now function */
 	lua_pushcfunction(L, utils_now);
 	lua_setfield(L, -2, "now");
+	/* set updatenow function */
+	lua_pushcfunction(L, utils_updatenow);
+	lua_setfield(L, -2, "updatenow");
 
 	return 1;
 }
