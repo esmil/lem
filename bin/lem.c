@@ -22,6 +22,9 @@
 #include <signal.h>
 #include <stdio.h>
 #include <assert.h>
+#include <sys/time.h>
+#include <time.h>
+#include <pthread.h>
 
 #include <lem.h>
 #include <lualib.h>
@@ -258,6 +261,8 @@ runqueue_pop(EV_P_ struct ev_idle *w, int revents)
 	lem_exit(EXIT_FAILURE);
 }
 
+#include "pool.c"
+
 static int
 queue_file(int argc, char *argv[], int fidx)
 {
@@ -326,6 +331,12 @@ main(int argc, char *argv[])
 			* sizeof(struct lem_runqueue_slot));
 	rq.first = rq.last = 0;
 	rq.mask = LEM_INITIAL_QUEUESIZE - 1;
+
+	/* initialize threadpool */
+	if (pool_init(10)) {
+		lem_log_error("Error initializing threadpool");
+		goto error;
+	}
 
 	/* load file */
 	if (queue_file(argc, argv, 1))

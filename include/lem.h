@@ -53,10 +53,29 @@ extern struct ev_loop *lem_loop;
 # define LEM_
 #endif
 
+struct lem_async {
+	lua_State *T;
+	void (*work)(struct lem_async *a);
+	void (*reap)(struct lem_async *a);
+	struct lem_async *next;
+};
+
 void *lem_xmalloc(size_t size);
 lua_State *lem_newthread(void);
 void lem_forgetthread(lua_State *T);
 void lem_queue(lua_State *T, int nargs);
 void lem_exit(int status);
+void lem_async_put(struct lem_async *a);
+
+static inline void
+lem_async_do(struct lem_async *a, lua_State *T,
+		void (*work)(struct lem_async *),
+		void (*reap)(struct lem_async *))
+{
+	a->T = T;
+	a->work = work;
+	a->reap = reap;
+	lem_async_put(a);
+}
 
 #endif
