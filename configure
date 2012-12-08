@@ -704,7 +704,6 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
-with_debug
 with_lua
 with_lmoddir
 with_cmoddir
@@ -1339,7 +1338,6 @@ if test -n "$ac_init_help"; then
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-debug            enable debugging output [default=no]
   --with-lua              check, builtin, lua or luajit [default=check]
   --with-lmoddir          Lua module installation directory
   --with-cmoddir          Lua C module installation directory
@@ -2165,15 +2163,6 @@ headers='lem.h streams.h'
 objects='bin/lem.o'
 
 SHARED='-shared'
-
-
-
-# Check whether --with-debug was given.
-if test "${with_debug+set}" = set; then :
-  withval=$with_debug;
-else
-  CPPFLAGS="$CPPFLAGS -DNDEBUG"
-fi
 
 
 

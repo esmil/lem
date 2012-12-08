@@ -45,7 +45,10 @@ endif
 
 .PHONY: all strip install clean
 
+all: CFLAGS += -DNDEBUG
 all: bin/lem lem.pc $(clibs)
+
+debug: bin/lem lem.pc $(clibs)
 
 bin/libev.o: CFLAGS += -w
 bin/lua.o: lua/luaconf.h

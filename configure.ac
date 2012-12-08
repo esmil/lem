@@ -9,12 +9,6 @@ AC_SUBST([headers], ['lem.h streams.h'])
 AC_SUBST([objects], ['bin/lem.o'])
 AC_SUBST([SHARED], ['-shared'])
 
-AC_ARG_WITH([debug],
-  [AS_HELP_STRING([--with-debug],
-    [enable debugging output @<:@default=no@:>@])],
-  [],
-  [CPPFLAGS="$CPPFLAGS -DNDEBUG"])
-
 AC_ARG_WITH([lua],
   [AS_HELP_STRING([--with-lua],
     [check, builtin, lua or luajit @<:@default=check@:>@])],
