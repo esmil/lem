@@ -45,6 +45,9 @@ AS_CASE(["x$target_os"],
   [SHARED='-dynamiclib -Wl,-undefined,dynamic_lookup']
   [STRIP="$STRIP -x"])
 
+# Check for pthread library
+AC_SEARCH_LIBS([pthread_create], [pthread])
+
 # Checks for Lua.
 AS_CASE(["x$with_lua"],
   [xcheck],
@@ -90,7 +93,7 @@ AS_IF([test "x$with_lua" = 'xbuiltin'],
   [AS_IF([test "x$cmoddir" = 'x'], [cmoddir="\${libdir}/lua/$builtin_lua_version"])])
 
 # Checks for header files.
-AC_CHECK_HEADERS([stddef.h stdlib.h string.h unistd.h time.h])
+AC_CHECK_HEADERS([stddef.h stdlib.h string.h unistd.h sys/time.h time.h pthread.h])
 AC_CHECK_HEADERS([sys/eventfd.h sys/epoll.h sys/event.h])
 
 #  [AC_RUN_IFELSE([AC_LANG_PROGRAM([
