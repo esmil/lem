@@ -38,6 +38,7 @@
 #include <streams.h>
 
 #include "sendfile.c"
+#include "file.c"
 #include "stream.c"
 #include "server.c"
 #include "tcp.c"
@@ -168,6 +169,26 @@ luaopen_lem_streams_core(lua_State *L)
 	/* insert table */
 	lua_setfield(L, -2, "OStream");
 
+	/* create File metatable */
+	lua_newtable(L);
+	/* mt.__index = mt */
+	lua_pushvalue(L, -1);
+	lua_setfield(L, -2, "__index");
+	/* mt.__gc = <file_gc> */
+	lua_pushcfunction(L, file_gc);
+	lua_setfield(L, -2, "__gc");
+	/* mt.closed = <file_closed> */
+	lua_pushcfunction(L, file_closed);
+	lua_setfield(L, -2, "closed");
+	/* mt.close = <file_close> */
+	lua_pushcfunction(L, file_close);
+	lua_setfield(L, -2, "close");
+	/* mt.readp = <file_readp> */
+	lua_pushcfunction(L, file_readp);
+	lua_setfield(L, -2, "readp");
+	/* insert table */
+	lua_setfield(L, -2, "File");
+
 	/* create metatable for server objects */
 	lua_newtable(L);
 	/* mt.__index = mt */
@@ -204,7 +225,8 @@ luaopen_lem_streams_core(lua_State *L)
 	/* insert open function */
 	lua_getfield(L, -1, "IStream"); /* upvalue 1 = IStream */
 	lua_getfield(L, -2, "OStream"); /* upvalue 2 = OStream */
-	lua_pushcclosure(L, stream_open, 2);
+	lua_getfield(L, -3, "File");    /* upvalue 3 = File */
+	lua_pushcclosure(L, stream_open, 3);
 	lua_setfield(L, -2, "open");
 	/* insert popen function */
 	lua_getfield(L, -1, "IStream"); /* upvalue 1 = IStream */

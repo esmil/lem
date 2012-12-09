@@ -649,6 +649,119 @@ stream_sendfile(lua_State *T)
 	return lua_yield(T, 3);
 }
 
+struct open {
+	struct lem_async a;
+	const char *path;
+	int fd;
+	int flags;
+	int type;
+};
+
+static void
+stream_open_work(struct lem_async *a)
+{
+	struct open *o = (struct open *)a;
+	int fd;
+	struct stat st;
+
+	fd = open(o->path, o->flags | O_NONBLOCK,
+			S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	if (fd < 0)
+		goto error;
+
+	if (fstat(fd, &st))
+		goto error;
+
+	o->fd = fd;
+	lem_debug("st.st_mode & S_IFMT = %o", st.st_mode & S_IFMT);
+	switch (st.st_mode & S_IFMT) {
+	case S_IFSOCK:
+	case S_IFCHR:
+	case S_IFIFO:
+		o->type = 1;
+		break;
+
+	case S_IFREG:
+	case S_IFBLK:
+		o->type = 0;
+		break;
+
+	default:
+		o->type = -1;
+	}
+
+	return;
+
+error:
+	o->fd = -errno;
+}
+
+static void
+stream_open_reap(struct lem_async *a)
+{
+	struct open *o = (struct open *)a;
+	lua_State *T = o->a.T;
+	int fd = o->fd;
+	int flags = o->flags;
+	int ret = o->type;
+	struct istream *is;
+	struct ostream *os;
+
+	lem_debug("o->type = %d", ret);
+	free(o);
+
+	if (fd < 0) {
+		lua_pushnil(T);
+		lua_pushstring(T, strerror(-o->fd));
+		/*
+		switch (-o->fd) {
+		case ENOENT:
+			lua_pushliteral(T, "not found");
+			break;
+		case EACCES:
+			lua_pushliteral(T, "permission denied");
+			break;
+		default:
+			lua_pushstring(T, strerror(errno));
+		}
+		*/
+		lem_queue(T, 2);
+		return;
+	}
+
+	if (ret < 0) {
+		lua_pushnil(T);
+		lua_pushliteral(T, "invalid type");
+		lem_queue(T, 2);
+		return;
+	}
+
+	if (ret == 0) {
+		file_new(T, fd, lua_upvalueindex(3));
+		lem_queue(T, 1);
+		return;
+	}
+
+	if ((flags & O_WRONLY) == 0)
+		is = istream_new(T, fd, lua_upvalueindex(1));
+	else
+		is = NULL;
+
+	if (flags & (O_RDWR | O_WRONLY))
+		os = ostream_new(T, fd, lua_upvalueindex(2));
+	else
+		os = NULL;
+
+	if (is && os) {
+		is->twin = os;
+		os->twin = is;
+		ret = 2;
+	} else
+		ret = 1;
+
+	lem_queue(T, ret);
+}
+
 static int
 mode_to_flags(const char *mode)
 {
@@ -698,46 +811,24 @@ stream_open(lua_State *T)
 {
 	const char *path = luaL_checkstring(T, 1);
 	int flags = mode_to_flags(luaL_optstring(T, 2, "r"));
-	int fd;
-	struct istream *is;
-	struct ostream *os;
+	struct open *o;
+	int args;
 
 	if (flags < 0)
 		return luaL_error(T, "invalid mode string");
 
-	fd = open(path, flags | O_NONBLOCK);
-	if (fd < 0) {
-		lua_pushnil(T);
-		switch (errno) {
-		case ENOENT:
-			lua_pushliteral(T, "not found");
-			break;
-		case EACCES:
-			lua_pushliteral(T, "permission denied");
-			break;
-		default:
-			lua_pushstring(T, strerror(errno));
-		}
-		return 2;
+	o = lem_xmalloc(sizeof(struct open));
+	o->path = path;
+	o->flags = flags;
+
+	lem_async_do(&o->a, T, stream_open_work, stream_open_reap);
+
+	args = lua_gettop(T);
+	if (args > 2) {
+		lua_settop(T, 2);
+		args = 2;
 	}
-
-	if ((flags & O_WRONLY) == 0)
-		is = istream_new(T, fd, lua_upvalueindex(1));
-	else
-		is = NULL;
-
-	if (flags & (O_RDWR | O_WRONLY))
-		os = ostream_new(T, fd, lua_upvalueindex(2));
-	else
-		os = NULL;
-
-	if (is && os) {
-		is->twin = os;
-		os->twin = is;
-		return 2;
-	}
-
-	return 1;
+	return lua_yield(T, args);
 }
 
 static int

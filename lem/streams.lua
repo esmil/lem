@@ -43,6 +43,7 @@ do
 	end
 
 	M.IStream.read = M.reader(M.IStream.readp)
+	M.File.read = M.reader(M.File.readp)
 end
 
 return M
