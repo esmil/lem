@@ -21,7 +21,7 @@
 
 #include <lem.h>
 
-#define LEM_INPUTBUF_SIZE 1024
+#define LEM_INPUTBUF_SIZE 4096
 
 struct lem_inputbuf {
 	unsigned int start;
