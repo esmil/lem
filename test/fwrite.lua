@@ -44,6 +44,10 @@ for i = 1, threads do
 		print(tostring(n) .. '-3')
 		assert(file:write('\n'))
 		print(tostring(n) .. '-4')
+		print(assert(file:seek("cur", -2)))
+		print(tostring(n) .. '-5')
+		assert(file:write('Dav!'))
+		print(tostring(n) .. '-6')
 
 		threads = threads - 1
 	end, i)

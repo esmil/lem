@@ -22,9 +22,15 @@ struct file {
 	int ret;
 	union {
 		struct lem_parser *p;
-		const char *out;
+		struct {
+			const char *out;
+			size_t out_size;
+		};
+		struct {
+			off_t offset;
+			int whence;
+		};
 	};
-	size_t out_size;
 	struct lem_inputbuf buf;
 };
 
@@ -261,4 +267,75 @@ file_write(lua_State *T)
 
 	lua_settop(T, 2);
 	return lua_yield(T, 2);
+}
+
+/*
+ * file:seek() method
+ */
+static void
+file_seek_work(struct lem_async *a)
+{
+	struct file *f = (struct file *)a;
+	off_t bytes = lseek(f->fd, f->offset, f->whence);
+
+	if (bytes == (off_t)-1) {
+		f->ret = errno;
+	} else {
+		f->offset = bytes;
+		f->ret = 0;
+	}
+}
+
+static void
+file_seek_reap(struct lem_async *a)
+{
+	struct file *f = (struct file *)a;
+	lua_State *T = f->a.T;
+
+	f->a.T = NULL;
+
+	if (f->ret) {
+		lua_pushnil(T);
+		lua_pushstring(T, strerror(f->ret));
+		lem_queue(T, 2);
+		return;
+	}
+
+	lua_pushnumber(T, f->offset);
+	lem_queue(T, 1);
+}
+
+static int
+file_seek(lua_State *T)
+{
+	static const int mode[] = { SEEK_SET, SEEK_CUR, SEEK_END };
+	static const char *const modenames[] = { "set", "cur", "end", NULL };
+	struct file *f;
+	int op;
+	lua_Number offset;
+
+	luaL_checktype(T, 1, LUA_TUSERDATA);
+	op = luaL_checkoption(T, 2, "cur", modenames);
+	offset = luaL_optnumber(T, 3, 0.);
+	f = lua_touserdata(T, 1);
+	f->offset = (off_t)offset;
+	luaL_argcheck(T, (lua_Number)f->offset == offset, 3,
+			"not an integer in proper range");
+	if (f->fd < 0) {
+		lua_pushnil(T);
+		lua_pushliteral(T, "closed");
+		return 2;
+	}
+
+	if (f->a.T != NULL) {
+		lua_pushnil(T);
+		lua_pushliteral(T, "busy");
+		return 2;
+	}
+
+	f->whence = mode[op];
+	lem_async_do(&f->a, T, file_seek_work, file_seek_reap);
+
+	lua_settop(T, 1);
+	return lua_yield(T, 1);
 }
