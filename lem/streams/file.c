@@ -20,7 +20,11 @@ struct file {
 	struct lem_async a;
 	int fd;
 	int ret;
-	struct lem_parser *p;
+	union {
+		struct lem_parser *p;
+		const char *out;
+	};
+	size_t out_size;
 	struct lem_inputbuf buf;
 };
 
@@ -193,4 +197,68 @@ file_readp(lua_State *T)
 	f->p = p;
 	lem_async_do(&f->a, T, file_readp_work, file_readp_reap);
 	return lua_yield(T, lua_gettop(T));
+}
+
+/*
+ * file:write() method
+ */
+static void
+file_write_work(struct lem_async *a)
+{
+	struct file *f = (struct file *)a;
+	ssize_t bytes = write(f->fd, f->out, f->out_size);
+
+	if (bytes < 0)
+		f->ret = errno;
+	else
+		f->ret = 0;
+}
+
+static void
+file_write_reap(struct lem_async *a)
+{
+	struct file *f = (struct file *)a;
+	lua_State *T = f->a.T;
+
+	f->a.T = NULL;
+	if (f->ret) {
+		lua_pushnil(T);
+		lua_pushstring(T, strerror(f->ret));
+		lem_queue(T, 2);
+		return;
+	}
+
+	lua_pushboolean(T, 1);
+	lem_queue(T, 1);
+}
+
+static int
+file_write(lua_State *T)
+{
+	struct file *f;
+	const char *out;
+	size_t out_size;
+
+	luaL_checktype(T, 1, LUA_TUSERDATA);
+	out = luaL_checklstring(T, 2, &out_size);
+
+	f = lua_touserdata(T, 1);
+	if (f->fd < 0) {
+		lua_pushnil(T);
+		lua_pushliteral(T, "closed");
+		return 2;
+	}
+
+	if (f->a.T != NULL) {
+		lua_pushnil(T);
+		lua_pushliteral(T, "busy");
+		return 2;
+	}
+
+	f->out = out;
+	f->out_size = out_size;
+	lem_async_do(&f->a, T, file_write_work, file_write_reap);
+
+	lua_settop(T, 2);
+	return lua_yield(T, 2);
 }

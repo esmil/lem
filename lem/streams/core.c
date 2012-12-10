@@ -186,6 +186,9 @@ luaopen_lem_streams_core(lua_State *L)
 	/* mt.readp = <file_readp> */
 	lua_pushcfunction(L, file_readp);
 	lua_setfield(L, -2, "readp");
+	/* mt.write = <file_write> */
+	lua_pushcfunction(L, file_write);
+	lua_setfield(L, -2, "write");
 	/* insert table */
 	lua_setfield(L, -2, "File");
 
