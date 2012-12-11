@@ -212,7 +212,7 @@ The following methods are available on streams.
   action on the stream.
 
   Returns `true` on succes or otherwise `nil` followed by an error message.
-  If the stream is already closed the error message will be `'already closed'`.
+  If the stream is already closed the error message will be `'closed'`.
 
 * __stream:interrupt()__
 
@@ -321,7 +321,7 @@ The following methods are available on server objects.
   on the object it will be interrupted.
 
   Returns `true` on succes or otherwise `nil` followed by an error message.
-  If the server is already closed the error message will be `'already closed'`.
+  If the server is already closed the error message will be `'closed'`.
 
 * __server:interrupt()__
 

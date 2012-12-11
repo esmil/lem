@@ -103,11 +103,8 @@ stream_interrupt(lua_State *T)
 static int
 stream_close_check(lua_State *T, struct ev_io *w)
 {
-	if (w->fd < 0) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "already closed");
-		return 2;
-	}
+	if (w->fd < 0)
+		return io_closed(T);
 
 	if (w->data != NULL) {
 		lua_State *S = w->data;
@@ -255,17 +252,10 @@ stream_readp(lua_State *T)
 		return luaL_argerror(T, 2, "expected userdata");
 
 	s = lua_touserdata(T, 1);
-	if (s->w.fd < 0) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "closed");
-		return 2;
-	}
-
-	if (s->w.data != NULL) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "busy");
-		return 2;
-	}
+	if (s->w.fd < 0)
+		return io_closed(T);
+	if (s->w.data != NULL)
+		return io_busy(T);
 
 	p = lua_touserdata(T, 2);
 	if (p->init)
@@ -388,17 +378,10 @@ stream_write(lua_State *T)
 	luaL_checktype(T, 2, LUA_TSTRING);
 
 	s = lua_touserdata(T, 1);
-	if (s->w.fd < 0) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "closed");
-		return 2;
-	}
-
-	if (s->w.data != NULL) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "busy");
-		return 2;
-	}
+	if (s->w.fd < 0)
+		return io_closed(T);
+	if (s->w.data != NULL)
+		return io_busy(T);
 
 	s->data = lua_tolstring(T, 2, &s->len);
 	if (s->len == 0) {
@@ -453,17 +436,10 @@ stream_setcork(lua_State *T, int state)
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
 	s = lua_touserdata(T, 1);
-	if (s->w.fd < 0) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "closed");
-		return 2;
-	}
-
-	if (s->w.data != NULL) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "busy");
-		return 2;
-	}
+	if (s->w.fd < 0)
+		return io_closed(T);
+	if (s->w.data != NULL)
+		return io_busy(T);
 
 	if (setsockopt(s->w.fd, IPPROTO_TCP, TCP_CORK, &state, sizeof(int))) {
 		lua_pushnil(T);
@@ -603,17 +579,10 @@ stream_sendfile(lua_State *T)
 	offset = (off_t)luaL_optnumber(T, 3, 0);
 
 	s = lua_touserdata(T, 1);
-	if (s->w.fd < 0) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "closed");
-		return 2;
-	}
-
-	if (s->w.data != NULL) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "busy");
-		return 2;
-	}
+	if (s->w.fd < 0)
+		return io_closed(T);
+	if (s->w.data != NULL)
+		return io_busy(T);
 
 	f = lua_touserdata(T, 2);
 	if (f->fd < 0) {

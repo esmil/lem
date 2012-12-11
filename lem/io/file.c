@@ -83,17 +83,10 @@ file_close(lua_State *T)
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
 	f = lua_touserdata(T, 1);
-	if (f->fd < 0) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "already closed");
-		return 2;
-	}
-
-	if (f->a.T != NULL) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "busy");
-		return 2;
-	}
+	if (f->fd < 0)
+		return io_closed(T);
+	if (f->a.T != NULL)
+		return io_busy(T);
 
 	lem_debug("collecting %d", f->fd);
 	ret = close(f->fd);
@@ -180,17 +173,10 @@ file_readp(lua_State *T)
 		return luaL_argerror(T, 2, "expected userdata");
 
 	f = lua_touserdata(T, 1);
-	if (f->fd < 0) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "closed");
-		return 2;
-	}
-
-	if (f->a.T != NULL) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "busy");
-		return 2;
-	}
+	if (f->fd < 0)
+		return io_closed(T);
+	if (f->a.T != NULL)
+		return io_busy(T);
 
 	p = lua_touserdata(T, 2);
 	if (p->init)
@@ -249,17 +235,10 @@ file_write(lua_State *T)
 	out = luaL_checklstring(T, 2, &out_size);
 
 	f = lua_touserdata(T, 1);
-	if (f->fd < 0) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "closed");
-		return 2;
-	}
-
-	if (f->a.T != NULL) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "busy");
-		return 2;
-	}
+	if (f->fd < 0)
+		return io_closed(T);
+	if (f->a.T != NULL)
+		return io_busy(T);
 
 	f->out = out;
 	f->out_size = out_size;
@@ -321,17 +300,10 @@ file_seek(lua_State *T)
 	f->offset = (off_t)offset;
 	luaL_argcheck(T, (lua_Number)f->offset == offset, 3,
 			"not an integer in proper range");
-	if (f->fd < 0) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "closed");
-		return 2;
-	}
-
-	if (f->a.T != NULL) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "busy");
-		return 2;
-	}
+	if (f->fd < 0)
+		return io_closed(T);
+	if (f->a.T != NULL)
+		return io_busy(T);
 
 	f->whence = mode[op];
 	lem_async_do(&f->a, T, file_seek_work, file_seek_reap);

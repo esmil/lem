@@ -50,11 +50,8 @@ server_close(lua_State *T)
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
 	w = lua_touserdata(T, 1);
-	if (w->fd < 0) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "already closed");
-		return 2;
-	}
+	if (w->fd < 0)
+		return io_closed(T);
 
 	if (w->data != NULL) {
 		lem_debug("interrupting listen");
@@ -169,17 +166,10 @@ server_accept(lua_State *T)
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
 	w = lua_touserdata(T, 1);
-	if (w->fd < 0) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "closed");
-		return 2;
-	}
-
-	if (w->data != NULL) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "busy");
-		return 2;
-	}
+	if (w->fd < 0)
+		return io_closed(T);
+	if (w->data != NULL)
+		return io_busy(T);
 
 	switch (try_accept(T, w)) {
 	case 0:
@@ -273,17 +263,10 @@ server_autospawn(lua_State *T)
 	luaL_checktype(T, 2, LUA_TFUNCTION);
 
 	w = lua_touserdata(T, 1);
-	if (w->fd < 0) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "closed");
-		return 2;
-	}
-
-	if (w->data != NULL) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "busy");
-		return 2;
-	}
+	if (w->fd < 0)
+		return io_closed(T);
+	if (w->data != NULL)
+		return io_busy(T);
 
 	w->cb = server_autospawn_handler;
 	w->data = T;

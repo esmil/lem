@@ -85,11 +85,8 @@ sendfile_close(lua_State *T)
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
 	f = lua_touserdata(T, 1);
-	if (f->fd < 0) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "already closed");
-		return 2;
-	}
+	if (f->fd < 0)
+		return io_closed(T);
 
 	if (close(f->fd)) {
 		lua_pushnil(T);
@@ -109,11 +106,8 @@ sendfile_size(lua_State *T)
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
 	f = lua_touserdata(T, 1);
-	if (f->fd < 0) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "closed");
-		return 2;
-	}
+	if (f->fd < 0)
+		return io_closed(T);
 
 	lua_pushnumber(T, (lua_Number)f->size);
 	return 1;

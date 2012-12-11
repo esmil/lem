@@ -37,6 +37,22 @@
 
 #include <lem-io.h>
 
+static int
+io_closed(lua_State *T)
+{
+	lua_pushnil(T);
+	lua_pushliteral(T, "closed");
+	return 2;
+}
+
+static int
+io_busy(lua_State *T)
+{
+	lua_pushnil(T);
+	lua_pushliteral(T, "busy");
+	return 2;
+}
+
 #include "sendfile.c"
 #include "file.c"
 #include "stream.c"
