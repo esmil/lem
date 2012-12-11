@@ -35,40 +35,40 @@ function http.Request:body()
 	if len <= 0 then return body end
 
 	if self.headers['Expect'] == '100-continue' then
-		local ok, err = self.ostream:send('HTTP/1.1 100 Continue\r\n\r\n')
+		local ok, err = self.client:send('HTTP/1.1 100 Continue\r\n\r\n')
 		if not ok then return nil, err end
 	end
 
 	local err
-	body, err = self.istream:read(len)
+	body, err = self.client:read(len)
 	if not body then return nil, err end
 
 	return body
 end
 
 function http.Response:body_chunked()
-	local istream = self.istream
+	local client = self.client
 	local t, n = {}, 0
 	local line, err
 	while true do
-		line, err = istream:read('*l')
+		line, err = client:read('*l')
 		if not line then return nil, err end
 
 		local num = tonumber(line, 16)
 		if not num then return nil, 'expectation failed' end
 		if num == 0 then break end
 
-		local data, err = istream:read(num)
+		local data, err = client:read(num)
 		if not data then return nil, err end
 
 		n = n + 1
 		t[n] = data
 
-		line, err = istream:read('*l')
+		line, err = client:read('*l')
 		if not line then return nil, err end
 	end
 
-	line, err = istream:read('*l')
+	line, err = client:read('*l')
 	if not line then return nil, err end
 
 	return t
@@ -85,7 +85,7 @@ function http.Response:body()
 	num = tonumber(num)
 	if not num then return nil, 'invalid content length' end
 
-	return self.istream:read(num)
+	return self.client:read(num)
 end
 
 return http

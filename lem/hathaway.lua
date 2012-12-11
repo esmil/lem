@@ -226,14 +226,13 @@ do
 		return true
 	end
 
-	local function handler(istream, ostream)
+	local function handler(client)
 		repeat
-			local req, err = istream:read('HTTPRequest')
+			local req, err = client:read('HTTPRequest')
 			if not req then M.debug(err) break end
 			local method, uri, version = req.method, req.uri, req.version
 			M.debug(format("%s %s HTTP/%s", method, uri, version))
 
-			req.ostream = ostream
 			local res = new_response(req)
 
 			if version ~= '1.0' and version ~= '1.1' then
@@ -322,31 +321,30 @@ do
 			i = i + 1
 			robe[i] = '\r\n'
 
-			local ok, err = ostream:cork()
+			local ok, err = client:cork()
 			if not ok then M.debug(err) break end
 
-			local ok, err = ostream:write(concat(robe))
+			local ok, err = client:write(concat(robe))
 			if not ok then M.debug(err)	break end
 
 			if method ~= 'HEAD' then
 				if file then
-					ok, err = ostream:sendfile(file)
+					ok, err = client:sendfile(file)
 					if close then file:close() end
 				else
-					ok, err = ostream:write(concat(res))
+					ok, err = client:write(concat(res))
 				end
 				if not ok then M.debug(err)	break end
 			end
 
-			local ok, err = ostream:uncork()
+			local ok, err = client:uncork()
 			if not ok then M.debug(err) break end
 
 		until version == '1.0'
 		   or req.headers['Connection'] == 'close'
 		   or headers['Connection'] == 'close'
 
-		istream:close()
-		ostream:close()
+		client:close()
 	end
 
 	function M.Hathaway(address, port)

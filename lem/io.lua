@@ -42,12 +42,12 @@ do
 		end
 	end
 
-	io.IStream.read = io.reader(io.IStream.readp)
+	io.Stream.read = io.reader(io.Stream.readp)
 	io.File.read = io.reader(io.File.readp)
 end
 
 do
-	local _write, stdout = io.OStream.write, io.stdout
+	local _write, stdout = io.Stream.write, io.stdout
 
 	function io.write(str)
 		return _write(stdout, str)

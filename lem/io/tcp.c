@@ -17,13 +17,13 @@
  */
 
 static void
-connect_handler(EV_P_ struct ev_io *w, int revents)
+tcp_connect_cb(EV_P_ struct ev_io *w, int revents)
 {
 	(void)revents;
 
 	lem_debug("connection established");
 	ev_io_stop(EV_A_ w);
-	lem_queue(w->data, 2);
+	lem_queue(w->data, 1);
 	w->data = NULL;
 }
 
@@ -45,8 +45,7 @@ tcp_connect(lua_State *T)
 	struct addrinfo *ainfo;
 	int sock;
 	int ret;
-	struct istream *is;
-	struct ostream *os;
+	struct stream *s;
 
 	/* lookup name */
 	ret = getaddrinfo(addr, NULL, &hints, &ainfo);
@@ -99,10 +98,7 @@ tcp_connect(lua_State *T)
 	}
 
 	lua_settop(T, 1);
-	is = istream_new(T, sock, lua_upvalueindex(1));
-	os = ostream_new(T, sock, lua_upvalueindex(2));
-	is->twin = os;
-	os->twin = is;
+	s = stream_new(T, sock, lua_upvalueindex(1));
 
 	/* connect */
 	ret = connect(sock, ainfo->ai_addr, ainfo->ai_addrlen);
@@ -114,10 +110,10 @@ tcp_connect(lua_State *T)
 
 	if (errno == EINPROGRESS) {
 		lem_debug("EINPROGRESS");
-		os->w.data = T;
-		os->w.cb = connect_handler;
-		ev_io_start(LEM_ &os->w);
-		return lua_yield(T, 3);
+		s->w.data = T;
+		s->w.cb = tcp_connect_cb;
+		ev_io_start(LEM_ &s->w);
+		return lua_yield(T, 2);
 	}
 
 	close(sock);
@@ -128,7 +124,7 @@ tcp_connect(lua_State *T)
 }
 
 static int
-common_listen(lua_State *T, struct sockaddr *address, socklen_t alen,
+tcp_listen(lua_State *T, struct sockaddr *address, socklen_t alen,
               int sock, int backlog)
 {
 	struct ev_io *w;
@@ -212,7 +208,7 @@ tcp4_listen(lua_State *T)
 		return 2;
 	}
 
-	return common_listen(T, (struct sockaddr *)&address,
+	return tcp_listen(T, (struct sockaddr *)&address,
 	                     sizeof(struct sockaddr_in), sock, backlog);
 }
 
@@ -246,6 +242,6 @@ tcp6_listen(lua_State *T)
 		return 2;
 	}
 
-	return common_listen(T, (struct sockaddr *)&address,
+	return tcp_listen(T, (struct sockaddr *)&address,
 	                     sizeof(struct sockaddr_in6), sock, backlog);
 }

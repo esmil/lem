@@ -165,7 +165,7 @@ parse_http_init(lua_State *T)
 	lua_settop(T, 2);
 	lua_createtable(T, 0, 5);
 	lua_pushvalue(T, 1);
-	lua_setfield(T, -2, "istream");
+	lua_setfield(T, -2, "client");
 }
 
 static void

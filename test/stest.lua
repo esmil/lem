@@ -31,12 +31,12 @@ utils.spawn(function()
 	server:close()
 end)
 
-local ok, err = server:autospawn(function(i, o)
+local ok, err = server:autospawn(function(client)
 	print 'Accepted a connection'
 	local sleeper = utils.newsleeper()
 
 	while true do
-		local line, err = i:read('*l')
+		local line, err = client:read('*l')
 		if not line then
 			if err == 'closed' then
 				print("Client closed connection")
@@ -50,12 +50,11 @@ local ok, err = server:autospawn(function(i, o)
 		if line ~= 'ping' then break end
 
 		sleeper:sleep(0.4)
-		assert(o:write('pong\n'))
+		assert(client:write('pong\n'))
 	end
 
 	print "Ok, I'm out"
-	assert(i:close())
-	assert(o:close())
+	assert(client:close())
 end)
 
 if not ok and err ~= 'interrupted' then error(err) end

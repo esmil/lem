@@ -102,22 +102,23 @@ server_interrupt(lua_State *T)
 }
 
 static int
-try_accept(lua_State *T, struct ev_io *w)
+server__accept(lua_State *T, struct ev_io *w)
 {
 	struct sockaddr client_addr;
 	unsigned int client_addrlen;
 	int sock;
-	struct istream *is;
-	struct ostream *os;
 
 	sock = accept(w->fd, &client_addr, &client_addrlen);
 	if (sock < 0) {
 		if (errno == EAGAIN || errno == ECONNABORTED)
 			return 0;
+
+		close(w->fd);
+		w->fd = -1;
 		lua_pushnil(T);
 		lua_pushfstring(T, "error accepting connection: %s",
 		                strerror(errno));
-		return -1;
+		return 2;
 	}
 
 	/* make the socket non-blocking */
@@ -126,43 +127,34 @@ try_accept(lua_State *T, struct ev_io *w)
 		lua_pushnil(T);
 		lua_pushfstring(T, "error making socket non-blocking: %s",
 		                strerror(errno));
-		return -1;
+		return 2;
 	}
 
-	is = istream_new(T, sock, lua_upvalueindex(1));
-	os = ostream_new(T, sock, lua_upvalueindex(2));
-	is->twin = os;
-	os->twin = is;
-
+	stream_new(T, sock, lua_upvalueindex(1));
 	return 1;
 }
 
 static void
-server_accept_handler(EV_P_ struct ev_io *w, int revents)
+server_accept_cb(EV_P_ struct ev_io *w, int revents)
 {
+	int ret;
+
 	(void)revents;
 
-	switch (try_accept(w->data, w)) {
-	case 0:
+	ret = server__accept(w->data, w);
+	if (ret == 0)
 		return;
 
-	case 1:
-		break;
-
-	default:
-		close(w->fd);
-		w->fd = -1;
-	}
-
-	ev_io_stop(EV_A_ w);
-	lem_queue(w->data, 2);
 	w->data = NULL;
+	ev_io_stop(EV_A_ w);
+	lem_queue(w->data, ret);
 }
 
 static int
 server_accept(lua_State *T)
 {
 	struct ev_io *w;
+	int ret;
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
 	w = lua_touserdata(T, 1);
@@ -171,38 +163,25 @@ server_accept(lua_State *T)
 	if (w->data != NULL)
 		return io_busy(T);
 
-	switch (try_accept(T, w)) {
-	case 0:
-		w->cb = server_accept_handler;
-		w->data = T;
-		ev_io_start(LEM_ w);
+	ret = server__accept(T, w);
+	if (ret > 0)
+		return ret;
 
-		/* yield server object */
-		lua_settop(T, 1);
-		return lua_yield(T, 1);
-
-	case 1:
-		break;
-
-
-	default:
-		close(w->fd);
-		w->fd = -1;
-	}
-
-	return 2;
+	lua_settop(T, 1);
+	w->cb = server_accept_cb;
+	w->data = T;
+	ev_io_start(LEM_ w);
+	return lua_yield(T, 1);
 }
 
 static void
-server_autospawn_handler(EV_P_ struct ev_io *w, int revents)
+server_autospawn_cb(EV_P_ struct ev_io *w, int revents)
 {
 	lua_State *T = w->data;
 	struct sockaddr client_addr;
 	unsigned int client_addrlen;
 	int sock;
 	lua_State *S;
-	struct istream *is;
-	struct ostream *os;
 
 	(void)revents;
 
@@ -233,25 +212,20 @@ server_autospawn_handler(EV_P_ struct ev_io *w, int revents)
 	lua_pushvalue(T, 2);
 	lua_xmove(T, S, 1);
 
-	/* create streams */
-	is = istream_new(T, sock, lua_upvalueindex(1));
-	os = ostream_new(T, sock, lua_upvalueindex(2));
-	is->twin = os;
-	os->twin = is;
+	/* create stream */
+	stream_new(T, sock, lua_upvalueindex(1));
+	/* move stream to new thread */
+	lua_xmove(T, S, 1);
 
-	/* move streams to new thread */
-	lua_xmove(T, S, 2);
-
-	lem_queue(S, 2);
+	lem_queue(S, 1);
 	return;
 
 error:
 	ev_io_stop(EV_A_ w);
 	close(w->fd);
 	w->fd = -1;
-
-	lem_queue(T, 2);
 	w->data = NULL;
+	lem_queue(T, 2);
 }
 
 static int
@@ -268,7 +242,7 @@ server_autospawn(lua_State *T)
 	if (w->data != NULL)
 		return io_busy(T);
 
-	w->cb = server_autospawn_handler;
+	w->cb = server_autospawn_cb;
 	w->data = T;
 	ev_io_start(LEM_ w);
 

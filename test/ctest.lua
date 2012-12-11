@@ -22,12 +22,12 @@ print('Entered ' .. arg[0])
 local utils = require 'lem.utils'
 local io    = require 'lem.io'
 
-local iconn, oconn = assert(io.tcp_connect('127.0.0.1', arg[1] or 8080))
+local conn = assert(io.tcp_connect('127.0.0.1', arg[1] or 8080))
 
 for i = 1, 10 do
-	assert(oconn:write('ping\n'))
+	assert(conn:write('ping\n'))
 
-	local line, err = iconn:read('*l')
+	local line, err = conn:read('*l')
 	if not line then
 		if err == 'closed' then
 			print("Server closed connection")
@@ -40,7 +40,7 @@ for i = 1, 10 do
 	print("Server answered: '" .. line .. "'")
 end
 
-oconn:write('quit\n')
+conn:write('quit\n')
 
 print('Exiting ' .. arg[0])
 

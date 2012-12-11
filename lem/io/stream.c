@@ -16,235 +16,151 @@
  * along with LEM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-struct ostream;
-
-struct istream {
-	ev_io w;
-	struct ostream *twin;
+struct stream {
+	struct ev_io r;
+	struct ev_io w;
+	const char *out;
+	size_t out_len;
 	struct lem_parser *p;
 	struct lem_inputbuf buf;
 };
 
-struct ostream {
-	ev_io w;
-	struct istream *twin;
-	const char *data;
-	size_t len;
-};
+#define STREAM_FROM_WATCH(w, member)\
+	(struct stream *)(((char *)w) - offsetof(struct stream, member))
 
-static struct istream *
-istream_new(lua_State *T, int fd, int mt)
+static struct stream *
+stream_new(lua_State *T, int fd, int mt)
 {
-	struct istream *s;
-
 	/* create userdata and set the metatable */
-	s = lua_newuserdata(T, sizeof(struct istream));
+	struct stream *s = lua_newuserdata(T, sizeof(struct stream));
 	lua_pushvalue(T, mt);
 	lua_setmetatable(T, -2);
 
 	/* initialize userdata */
-	ev_io_init(&s->w, NULL, fd, EV_READ);
+	ev_io_init(&s->r, NULL, fd, EV_READ);
+	ev_io_init(&s->w, NULL, fd, EV_WRITE);
+	s->r.data = NULL;
 	s->w.data = NULL;
-	s->twin = NULL;
 	s->buf.start = s->buf.end = 0;
 
 	return s;
 }
 
 static int
-stream_closed(lua_State *T)
+stream_gc(lua_State *T)
 {
-	struct ev_io *w;
+	struct stream *s = lua_touserdata(T, 1);
 
-	luaL_checktype(T, 1, LUA_TUSERDATA);
-	w = lua_touserdata(T, 1);
-	lua_pushboolean(T, w->fd < 0);
-	return 1;
-}
-
-static int
-stream_busy(lua_State *T)
-{
-	struct ev_io *w;
-
-	luaL_checktype(T, 1, LUA_TUSERDATA);
-	w = lua_touserdata(T, 1);
-	lua_pushboolean(T, w->data != NULL);
-	return 1;
-}
-
-static int
-stream_interrupt(lua_State *T)
-{
-	struct ev_io *w;
-	lua_State *S;
-
-	luaL_checktype(T, 1, LUA_TUSERDATA);
-	w = lua_touserdata(T, 1);
-	S = w->data;
-	if (S == NULL) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "not busy");
-		return 2;
-	}
-
-	lem_debug("interrupting io action");
-	ev_io_stop(LEM_ w);
-	w->data = NULL;
-	lua_settop(S, 0);
-	lua_pushnil(S);
-	lua_pushliteral(S, "interrupted");
-	lem_queue(S, 2);
-
-	lua_pushboolean(T, 1);
-	return 1;
-}
-
-static int
-stream_close_check(lua_State *T, struct ev_io *w)
-{
-	if (w->fd < 0)
-		return io_closed(T);
-
-	if (w->data != NULL) {
-		lua_State *S = w->data;
-
-		lem_debug("interrupting io action");
-		ev_io_stop(LEM_ w);
-		w->data = NULL;
-		lua_settop(S, 0);
-		lua_pushnil(S);
-		lua_pushliteral(S, "interrupted");
-		lem_queue(S, 2);
-	}
+	if (s->r.fd >= 0)
+		close(s->r.fd);
 
 	return 0;
 }
 
 static int
-istream_close(lua_State *T)
+stream_closed(lua_State *T)
 {
-	struct istream *s;
+	struct stream *s;
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
 	s = lua_touserdata(T, 1);
-
-	lem_debug("collecting %d", s->w.fd);
-	if (stream_close_check(T, &s->w))
-		return 2;
-
-	if (s->twin)
-		s->twin->twin = NULL;
-	else if (close(s->w.fd)) {
-		s->w.fd = -1;
-		lua_pushnil(T);
-		lua_pushstring(T, strerror(errno));
-		return 2;
-	}
-
-	s->w.fd = -1;
-	lua_pushboolean(T, 1);
+	lua_pushboolean(T, s->r.fd < 0);
 	return 1;
 }
 
 static int
-ostream_close(lua_State *T)
+stream_close(lua_State *T)
 {
-	struct ostream *s;
+	struct stream *s;
+	int ret;
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
 	s = lua_touserdata(T, 1);
+	if (s->r.fd < 0)
+		return io_closed(T);
+	if (s->r.data != NULL || s->w.data != NULL)
+		return io_busy(T);
 
-	lem_debug("collecting %d", s->w.fd);
-	if (stream_close_check(T, &s->w))
-		return 2;
-
-	if (s->twin)
-		s->twin->twin = NULL;
-	else if (close(s->w.fd)) {
-		s->w.fd = -1;
+	ret = close(s->r.fd);
+	s->r.fd = s->w.fd = -1;
+	if (ret) {
 		lua_pushnil(T);
 		lua_pushstring(T, strerror(errno));
 		return 2;
 	}
 
-	s->w.fd = -1;
 	lua_pushboolean(T, 1);
 	return 1;
 }
 
 /*
- * istream:readp() method
+ * stream:readp() method
  */
-
-static void
-stream_readp_handler(EV_P_ ev_io *w, int revents)
+static int
+stream__readp(lua_State *T, struct stream *s)
 {
-	struct istream *s = (struct istream *)w;
-	lua_State *T = s->w.data;
 	ssize_t bytes;
 	int ret;
-	enum lem_preason reason;
-	const char *msg;
+	int err;
+	enum lem_preason res;
 
-	(void)revents;
-
-	while ((bytes = read(s->w.fd, s->buf.buf + s->buf.end,
+	while ((bytes = read(s->r.fd, s->buf.buf + s->buf.end,
 					LEM_INPUTBUF_SIZE - s->buf.end)) > 0) {
-		lem_debug("read %ld bytes from %d", bytes, s->w.fd);
+		lem_debug("read %ld bytes from %d", bytes, s->r.fd);
 
 		s->buf.end += bytes;
 
 		ret = s->p->process(T, &s->buf);
-		if (ret > 0) {
-			ev_io_stop(EV_A_ &s->w);
-			s->w.data = NULL;
-			lem_queue(T, ret);
-			return;
-		}
+		if (ret > 0)
+			return ret;
 	}
-	lem_debug("read %ld bytes from %d", bytes, s->w.fd);
+	err = errno;
+	lem_debug("read %ld bytes from %d", bytes, s->r.fd);
 
-	if (bytes < 0 && errno == EAGAIN)
-		return;
+	if (bytes < 0 && err == EAGAIN)
+		return 0;
 
-	ev_io_stop(EV_A_ &s->w);
-	s->w.data = NULL;
-
-	if (s->twin)
-		s->twin->twin = NULL;
+	if (bytes == 0 || err == ECONNRESET || err == EPIPE)
+		res = LEM_PCLOSED;
 	else
-		(void)close(s->w.fd);
-	s->w.fd = -1;
+		res = LEM_PERROR;
 
-	if (bytes == 0 || errno == ECONNRESET || errno == EPIPE) {
-		reason = LEM_PCLOSED;
-		msg = "closed";
-	} else {
-		reason = LEM_PERROR;
-		msg = strerror(errno);
-	}
-
-	if (s->p->destroy && (ret = s->p->destroy(T, &s->buf, reason)) > 0) {
-		lem_queue(T, ret);
-		return;
-	}
+	if (s->p->destroy && (ret = s->p->destroy(T, &s->buf, res)) > 0)
+		return ret;
 
 	lua_settop(T, 0);
+	if (res == LEM_PCLOSED)
+		return io_closed(T);
+
 	lua_pushnil(T);
-	lua_pushstring(T, msg);
-	lem_queue(T, 2);
+	lua_pushstring(T, strerror(err));
+	return 2;
+}
+
+static void
+stream_readp_cb(EV_P_ struct ev_io *w, int revents)
+{
+	struct stream *s = STREAM_FROM_WATCH(w, r);
+	lua_State *T = s->r.data;
+	int ret;
+
+	(void)revents;
+
+	ret = stream__readp(T, s);
+	if (ret == 0)
+		return;
+
+	ev_io_stop(EV_A_ &s->r);
+	s->r.data = NULL;
+	lem_queue(T, ret);
 }
 
 static int
 stream_readp(lua_State *T)
 {
-	struct istream *s;
+	struct stream *s;
 	struct lem_parser *p;
 	int ret;
-	ssize_t bytes;
-	enum lem_preason reason;
-	const char *msg;
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
 	ret = lua_type(T, 2);
@@ -252,130 +168,91 @@ stream_readp(lua_State *T)
 		return luaL_argerror(T, 2, "expected userdata");
 
 	s = lua_touserdata(T, 1);
-	if (s->w.fd < 0)
+	if (s->r.fd < 0)
 		return io_closed(T);
-	if (s->w.data != NULL)
+	if (s->r.data != NULL)
 		return io_busy(T);
 
 	p = lua_touserdata(T, 2);
 	if (p->init)
 		p->init(T, &s->buf);
 
-again:
 	ret = p->process(T, &s->buf);
 	if (ret > 0)
 		return ret;
 
-	bytes = read(s->w.fd, s->buf.buf + s->buf.end, LEM_INPUTBUF_SIZE - s->buf.end);
-	lem_debug("read %ld bytes from %d", bytes, s->w.fd);
-	if (bytes > 0) {
-		s->buf.end += bytes;
-		goto again;
-	}
-
-	if (bytes < 0 && errno == EAGAIN) {
-		s->p = p;
-		s->w.data = T;
-		s->w.cb = stream_readp_handler;
-		ev_io_start(LEM_ &s->w);
-		return lua_yield(T, lua_gettop(T));
-	}
-
-	if (s->twin)
-		s->twin->twin = NULL;
-	else
-		(void)close(s->w.fd);
-	s->w.fd = -1;
-
-	if (bytes == 0 || errno == ECONNRESET || errno == EPIPE) {
-		reason = LEM_PCLOSED;
-		msg = "closed";
-	} else {
-		reason = LEM_PERROR;
-		msg = strerror(errno);
-	}
-
-	if (p->destroy && (ret = p->destroy(T, &s->buf, reason)) > 0)
+	s->p = p;
+	ret = stream__readp(T, s);
+	if (ret > 0)
 		return ret;
 
-	lua_settop(T, 0);
+	s->r.data = T;
+	s->r.cb = stream_readp_cb;
+	ev_io_start(LEM_ &s->r);
+	return lua_yield(T, lua_gettop(T));
+}
+
+/*
+ * stream:write() method
+ */
+static int
+stream__write(lua_State *T, struct stream *s)
+{
+	ssize_t bytes;
+	int err;
+
+	while ((bytes = write(s->w.fd, s->out, s->out_len)) > 0) {
+		s->out_len -= bytes;
+		if (s->out_len == 0) {
+			lua_pushboolean(T, 1);
+			return 1;
+		}
+		s->out += bytes;
+	}
+	err = errno;
+
+	if (bytes < 0 && err == EAGAIN)
+		return 0;
+
+	close(s->w.fd);
+	s->w.fd = s->r.fd = -1;
+
+	if (bytes == 0 || err == ECONNRESET || err == EPIPE)
+		return io_closed(T);
+
 	lua_pushnil(T);
-	lua_pushstring(T, msg);
+	lua_pushstring(T, strerror(err));
 	return 2;
 }
 
-static struct ostream *
-ostream_new(lua_State *T, int fd, int mt)
-{
-	struct ostream *s;
-
-	/* create userdata and set the metatable */
-	s = lua_newuserdata(T, sizeof(struct ostream));
-	lua_pushvalue(T, mt);
-	lua_setmetatable(T, -2);
-
-	/* initialize userdata */
-	ev_io_init(&s->w, NULL, fd, EV_WRITE);
-	s->w.data = NULL;
-	s->twin = NULL;
-
-	return s;
-}
-
 static void
-stream_write_handler(EV_P_ struct ev_io *w, int revents)
+stream_write_cb(EV_P_ struct ev_io *w, int revents)
 {
-	struct ostream *s = (struct ostream *)w;
+	struct stream *s = STREAM_FROM_WATCH(w, w);
 	lua_State *T = s->w.data;
-	ssize_t bytes;
+	int ret;
 
 	(void)revents;
 
-again:
-	bytes = write(s->w.fd, s->data, s->len);
-	if (bytes > 0) {
-		s->len -= bytes;
-		if (s->len > 0) {
-			s->data += bytes;
-			goto again;
-		}
-
-		ev_io_stop(EV_A_ &s->w);
-		s->w.data = NULL;
-
-		lua_pushboolean(T, 1);
-		lem_queue(T, 1);
-		return;
-	}
-
-	if (bytes < 0 && errno == EAGAIN)
+	ret = stream__write(T, s);
+	if (ret == 0)
 		return;
 
 	ev_io_stop(EV_A_ &s->w);
 	s->w.data = NULL;
-
-	lua_pushnil(T);
-	if (bytes == 0 || errno == ECONNRESET || errno == EPIPE)
-		lua_pushliteral(T, "closed");
-	else
-		lua_pushstring(T, strerror(errno));
-
-	if (s->twin)
-		s->twin->twin = NULL;
-	else
-		(void)close(s->w.fd);
-	s->w.fd = -1;
-	lem_queue(T, 2);
+	lem_queue(T, ret);
 }
 
 static int
 stream_write(lua_State *T)
 {
-	struct ostream *s;
-	ssize_t bytes;
+	struct stream *s;
+	const char *out;
+	size_t out_len;
+	int ret;
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
-	luaL_checktype(T, 2, LUA_TSTRING);
+	out = luaL_checklstring(T, 2, &out_len);
 
 	s = lua_touserdata(T, 1);
 	if (s->w.fd < 0)
@@ -383,47 +260,19 @@ stream_write(lua_State *T)
 	if (s->w.data != NULL)
 		return io_busy(T);
 
-	s->data = lua_tolstring(T, 2, &s->len);
-	if (s->len == 0) {
-		lua_pushboolean(T, 1);
-		return 1;
-	}
+	lua_settop(T, 2);
 
-again:
-	bytes = write(s->w.fd, s->data, s->len);
-	if (bytes > 0) {
-		s->len -= bytes;
-		if (s->len > 0) {
-			s->data += bytes;
-			goto again;
-		}
+	s->out = out;
+	s->out_len = out_len;
+	ret = stream__write(T, s);
+	if (ret > 0)
+		return ret;
 
-		lua_pushboolean(T, 1);
-		return 1;
-	}
-
-	if (bytes < 0 && errno == EAGAIN) {
-		lua_settop(T, 1);
-		s->w.data = T;
-		s->w.cb = stream_write_handler;
-		ev_io_start(LEM_ &s->w);
-		return lua_yield(T, 1);
-	}
-
-	lua_pushnil(T);
-	if (bytes == 0 || errno == ECONNRESET || errno == EPIPE)
-		lua_pushliteral(T, "closed");
-	else
-		lua_pushstring(T, strerror(errno));
-
-	if (s->twin)
-		s->twin->twin = NULL;
-	else
-		(void)close(s->w.fd);
-	s->w.fd = -1;
-	return 2;
+	s->w.data = T;
+	s->w.cb = stream_write_cb;
+	ev_io_start(LEM_ &s->w);
+	return lua_yield(T, 2);
 }
-
 
 #ifndef TCP_CORK
 #define TCP_CORK TCP_NOPUSH
@@ -432,7 +281,7 @@ again:
 static int
 stream_setcork(lua_State *T, int state)
 {
-	struct ostream *s;
+	struct stream *s;
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
 	s = lua_touserdata(T, 1);
@@ -469,7 +318,7 @@ struct sendfile {
 };
 
 static int
-try_sendfile(lua_State *T, struct ostream *s, struct sendfile *sf)
+stream__sendfile(lua_State *T, struct stream *s, struct sendfile *sf)
 {
 #ifdef __FreeBSD__
 	int ret;
@@ -539,36 +388,28 @@ try_sendfile(lua_State *T, struct ostream *s, struct sendfile *sf)
 }
 
 static void
-sendfile_handler(EV_P_ struct ev_io *w, int revents)
+stream_sendfile_cb(EV_P_ struct ev_io *w, int revents)
 {
-	struct ostream *s = (struct ostream *)w;
+	struct stream *s = STREAM_FROM_WATCH(w, w);
 	lua_State *T = s->w.data;
 	struct sendfile *sf = lua_touserdata(T, 3);
 	int ret;
 
 	(void)revents;
 
-	ret = try_sendfile(T, s, sf);
+	ret = stream__sendfile(T, s, sf);
 	if (ret == 0)
 		return;
 
 	ev_io_stop(EV_A_ &s->w);
-	if (ret == 2) {
-		if (s->twin)
-			s->twin->twin = NULL;
-		else
-			(void)close(s->w.fd);
-		s->w.fd = -1;
-	}
-
-	lem_queue(T, ret);
 	s->w.data = NULL;
+	lem_queue(T, ret);
 }
 
 static int
 stream_sendfile(lua_State *T)
 {
-	struct ostream *s;
+	struct stream *s;
 	struct lem_sendfile *f;
 	struct sendfile *sf;
 	off_t offset;
@@ -599,21 +440,13 @@ stream_sendfile(lua_State *T)
 	sf->file = f;
 	sf->offset = offset;
 
-	ret = try_sendfile(T, s, sf);
-	if (ret > 0) {
-		if (ret == 2) {
-			if (s->twin)
-				s->twin->twin = NULL;
-			else
-				(void)close(s->w.fd);
-			s->w.fd = -1;
-		}
+	ret = stream__sendfile(T, s, sf);
+	if (ret > 0)
 		return ret;
-	}
 
 	lem_debug("yielding");
 	s->w.data = T;
-	s->w.cb = sendfile_handler;
+	s->w.cb = stream_sendfile_cb;
 	ev_io_start(LEM_ &s->w);
 	return lua_yield(T, 3);
 }
@@ -671,10 +504,7 @@ stream_open_reap(struct lem_async *a)
 	struct open *o = (struct open *)a;
 	lua_State *T = o->a.T;
 	int fd = o->fd;
-	int flags = o->flags;
 	int ret = o->type;
-	struct istream *is;
-	struct ostream *os;
 
 	lem_debug("o->type = %d", ret);
 	free(o);
@@ -705,30 +535,12 @@ stream_open_reap(struct lem_async *a)
 		return;
 	}
 
-	if (ret == 0) {
+	if (ret == 0)
 		file_new(T, fd, lua_upvalueindex(3));
-		lem_queue(T, 1);
-		return;
-	}
-
-	if ((flags & O_WRONLY) == 0)
-		is = istream_new(T, fd, lua_upvalueindex(1));
 	else
-		is = NULL;
+		stream_new(T, fd, lua_upvalueindex(1));
 
-	if (flags & (O_RDWR | O_WRONLY))
-		os = ostream_new(T, fd, lua_upvalueindex(2));
-	else
-		os = NULL;
-
-	if (is && os) {
-		is->twin = os;
-		os->twin = is;
-		ret = 2;
-	} else
-		ret = 1;
-
-	lem_queue(T, ret);
+	lem_queue(T, 1);
 }
 
 static int
@@ -806,39 +618,45 @@ stream_popen(lua_State *T)
 	const char *cmd = luaL_checkstring(T, 1);
 	const char *mode = luaL_optstring(T, 2, "r");
 	int fd[2];
+	int err;
 
 	if (mode[0] != 'r' && mode[0] != 'w')
 		return luaL_error(T, "invalid mode string");
 
-	if (pipe(fd))
+	if (pipe(fd)) {
+		err = errno;
 		goto error;
+	}
 
 	switch (fork()) {
 	case -1: /* error */
-		(void)close(fd[0]);
-		(void)close(fd[1]);
+		err = errno;
+		close(fd[0]);
+		close(fd[1]);
 		goto error;
 	case 0: /* child */
 		if (mode[0] == 'r') {
-			(void)close(fd[0]);
-			(void)dup2(fd[1], 1);
+			close(fd[0]);
+			dup2(fd[1], 1);
 		} else {
-			(void)close(fd[1]);
-			(void)dup2(fd[0], 0);
+			close(fd[1]);
+			dup2(fd[0], 0);
 		}
 
-		(void)execl("/bin/sh", "/bin/sh", "-c", cmd, NULL);
+		execl("/bin/sh", "/bin/sh", "-c", cmd, NULL);
 		exit(EXIT_FAILURE);
 	}
 
 	if (mode[0] == 'r') {
 		if (close(fd[1])) {
-			(void)close(fd[0]);
+			err = errno;
+			close(fd[0]);
 			goto error;
 		}
 	} else {
 		if (close(fd[0])) {
-			(void)close(fd[1]);
+			err = errno;
+			close(fd[1]);
 			goto error;
 		}
 		fd[0] = fd[1];
@@ -846,17 +664,15 @@ stream_popen(lua_State *T)
 
 	/* make the pipe non-blocking */
 	if (fcntl(fd[0], F_SETFL, O_NONBLOCK) < 0) {
-		(void)close(fd[0]);
+		err = errno;
+		close(fd[0]);
 		goto error;
 	}
 
-	if (mode[0] == 'r')
-		(void)istream_new(T, fd[0], lua_upvalueindex(1));
-	else
-		(void)ostream_new(T, fd[0], lua_upvalueindex(2));
+	stream_new(T, fd[0], lua_upvalueindex(1));
 	return 1;
 error:
 	lua_pushnil(T);
-	lua_pushstring(T, strerror(errno));
+	lua_pushstring(T, strerror(err));
 	return 2;
 }

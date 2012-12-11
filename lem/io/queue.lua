@@ -22,22 +22,18 @@ local setmetatable = setmetatable
 local thisthread, suspend, resume
 	= utils.thisthread, utils.suspend, utils.resume
 
-local QOStream = {}
-QOStream.__index = QOStream
+local Stream = {}
+Stream.__index = Stream
 
-function QOStream:closed(...)
+function Stream:closed(...)
 	return self.stream:closed(...)
 end
 
-function QOStream:interrupt(...)
-	return self.stream:interrupt(...)
-end
-
-function QOStream:close(...)
+function Stream:close(...)
 	return self.stream:close(...)
 end
 
-function QOStream:write(...)
+function Stream:write(...)
 	local nxt = self.next
 	if nxt == 0 then
 		nxt = 1
@@ -67,11 +63,11 @@ end
 
 local function wrap(stream, ...)
 	if not stream then return stream, ... end
-	return setmetatable({ stream = stream, next = 0 }, QOStream)
+	return setmetatable({ stream = stream, next = 0 }, Stream)
 end
 
 return {
-	QOStream = QOStream,
+	Stream = Stream,
 	wrap = wrap,
 }
 

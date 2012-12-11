@@ -27,7 +27,7 @@ local stdout = queue.wrap(io.stdout)
 
 do
 	local format = string.format
-	function queue.QOStream:printf(...)
+	function queue.Stream:printf(...)
 		return self:write(format(...))
 	end
 end
