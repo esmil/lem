@@ -16,18 +16,18 @@
 -- along with LEM.  If not, see <http://www.gnu.org/licenses/>.
 --
 
-local streams = require 'lem.streams'
-local M       = require 'lem.http.core'
+local io   = require 'lem.io'
+local http = require 'lem.http.core'
 
-streams.parsers['HTTPRequest'] = M.HTTPRequest
-M.HTTPRequest = nil
-streams.parsers['HTTPResponse'] = M.HTTPResponse
-M.HTTPResponse = nil
+io.parsers['HTTPRequest'] = http.HTTPRequest
+http.HTTPRequest = nil
+io.parsers['HTTPResponse'] = http.HTTPResponse
+http.HTTPResponse = nil
 
 local tonumber = tonumber
 local concat = table.concat
 
-function M.Request:body()
+function http.Request:body()
 	local len, body = self.headers['Content-Length'], ''
 	if not len then return body end
 
@@ -46,7 +46,7 @@ function M.Request:body()
 	return body
 end
 
-function M.Response:body_chunked()
+function http.Response:body_chunked()
 	local istream = self.istream
 	local t, n = {}, 0
 	local line, err
@@ -74,7 +74,7 @@ function M.Response:body_chunked()
 	return t
 end
 
-function M.Response:body()
+function http.Response:body()
 	if self.headers['Transfer-Encoding'] == 'chunked' then
 		return concat(self:body_chunked())
 	end
@@ -88,6 +88,6 @@ function M.Response:body()
 	return self.istream:read(num)
 end
 
-return M
+return http
 
 -- vim: ts=2 sw=2 noet:

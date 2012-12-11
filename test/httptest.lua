@@ -17,9 +17,9 @@
 -- along with LEM.  If not, see <http://www.gnu.org/licenses/>.
 --
 
-local utils   = require 'lem.utils'
-local streams = require 'lem.streams'
-local http    = require 'lem.http'
+local utils = require 'lem.utils'
+local io    = require 'lem.io'
+local http  = require 'lem.http'
 
 local format = string.format
 local concat = table.concat
@@ -27,8 +27,8 @@ local concat = table.concat
 local done = false
 
 utils.spawn(function()
-	--local istream, ostream = assert(streams.tcp_connect('www.google.dk', 80))
-	local istream, ostream = assert(streams.tcp_connect('127.0.0.1', 8080))
+	--local istream, ostream = assert(io.tcp_connect('www.google.dk', 80))
+	local istream, ostream = assert(io.tcp_connect('127.0.0.1', 8080))
 
 	print('\nConnected.')
 

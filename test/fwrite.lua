@@ -17,25 +17,19 @@
 -- along with LEM.  If not, see <http://www.gnu.org/licenses/>.
 --
 
-local utils  = require 'lem.utils'
-local stream = require 'lem.streams'
+local utils = require 'lem.utils'
+local io    = require 'lem.io'
 
-local write
-do
-	local stdout = stream.stdout
-	function write(str)
-		return stdout:write(str)
-	end
-end
+local write = io.write
 
 print("Press enter to read '" .. (arg[1] or arg[0]) .. "'")
-stream.stdin:read()
+io.stdin:read()
 
 local threads = 2
 for i = 1, threads do
 	utils.spawn(function(n)
-		local file = assert(stream.open('file' .. tostring(n) .. '.txt', 'w'))
-		assert(getmetatable(file) == stream.File, "Hmm...")
+		local file = assert(io.open('file' .. tostring(n) .. '.txt', 'w'))
+		assert(getmetatable(file) == io.File, "Hmm...")
 
 		print(tostring(n) .. '-1')
 		assert(file:write('Hej!\n'))
@@ -60,6 +54,6 @@ while threads > 0 do
 end
 
 print "\nDone. Press enter to continue."
-stream.stdin:read()
+io.stdin:read()
 
 -- vim: set ts=2 sw=2 noet:

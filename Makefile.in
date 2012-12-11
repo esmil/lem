@@ -25,14 +25,14 @@ headers      = @headers@
 
 llibs = \
 	lem/repl.lua \
-	lem/streams.lua \
-	lem/streams/queue.lua \
+	lem/io.lua \
+	lem/io/queue.lua \
 	lem/http.lua \
 	lem/hathaway.lua
 
 clibs = \
 	lem/utils.so \
-	lem/streams/core.so \
+	lem/io/core.so \
 	lem/http/core.so
 
 ifdef V

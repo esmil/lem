@@ -26,7 +26,7 @@ local format = string.format
 local concat = table.concat
 local remove = table.remove
 
-local streams = require 'lem.streams'
+local io = require 'lem.io'
 require 'lem.http'
 
 local M = {}
@@ -269,7 +269,7 @@ do
 			local headers = res.headers
 			local file, close = res.file, false
 			if type(file) == 'string' then
-				file, err = streams.sendfile(file)
+				file, err = io.sendfile(file)
 				if file then
 					close = true
 				else
@@ -350,7 +350,7 @@ do
 	end
 
 	function M.Hathaway(address, port)
-		local server, err = streams.tcp4_listen(address, port)
+		local server, err = io.tcp4_listen(address, port)
 		if not server then M.debug(err) return nil, err end
 
 		M.server = server

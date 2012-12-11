@@ -35,7 +35,7 @@
 #include <sys/sendfile.h>
 #endif
 
-#include <streams.h>
+#include <lem-io.h>
 
 #include "sendfile.c"
 #include "file.c"
@@ -81,7 +81,7 @@ module_index(lua_State *T)
 }
 
 int
-luaopen_lem_streams_core(lua_State *L)
+luaopen_lem_io_core(lua_State *L)
 {
 	/* create module table */
 	lua_newtable(L);

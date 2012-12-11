@@ -17,13 +17,13 @@
 -- along with LEM.  If not, see <http://www.gnu.org/licenses/>.
 --
 
-local utils   = require 'lem.utils'
-local streams = require 'lem.streams'
-local queue   = require 'lem.streams.queue'
+local utils = require 'lem.utils'
+local io    = require 'lem.io'
+local queue = require 'lem.io.queue'
 
 local exit   = false
 local ticker = utils.newsleeper()
-local stdout = queue.wrap(streams.stdout)
+local stdout = queue.wrap(io.stdout)
 
 do
 	local format = string.format
@@ -51,14 +51,14 @@ end
 
 -- type 'mkfifo pipe' to create a named pipe for this script
 -- and do 'cat > pipe' (in another terminal) to write to it
-local pipe = assert(streams.open(arg[1] or 'pipe', 'r'))
+local pipe = assert(io.open(arg[1] or 'pipe', 'r'))
 
 -- spawn coroutines to read from stdin and the pipe
-utils.spawn(poll, streams.stdin, 'stdin')
+utils.spawn(poll, io.stdin, 'stdin')
 utils.spawn(poll, pipe, 'pipe')
 
 do
-	--local out = streams.stderr
+	--local out = io.stderr
 	local out = stdout
 	local sound
 
@@ -73,7 +73,7 @@ do
 	until exit
 end
 
-streams.stdin:close()
+io.stdin:close()
 pipe:close()
 
 -- vim: syntax=lua ts=2 sw=2 noet:

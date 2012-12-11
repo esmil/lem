@@ -16,8 +16,8 @@
  * along with LEM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _LEM_STREAMS_H
-#define _LEM_STREAMS_H
+#ifndef _LEM_IO_H
+#define _LEM_IO_H
 
 #include <lem.h>
 

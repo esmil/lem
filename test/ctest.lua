@@ -19,10 +19,10 @@
 
 print('Entered ' .. arg[0])
 
-local utils   = require 'lem.utils'
-local streams = require 'lem.streams'
+local utils = require 'lem.utils'
+local io    = require 'lem.io'
 
-local iconn, oconn = assert(streams.tcp_connect('127.0.0.1', arg[1] or 8080))
+local iconn, oconn = assert(io.tcp_connect('127.0.0.1', arg[1] or 8080))
 
 for i = 1, 10 do
 	assert(oconn:write('ping\n'))

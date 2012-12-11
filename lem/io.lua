@@ -16,17 +16,17 @@
 -- along with LEM.  If not, see <http://www.gnu.org/licenses/>.
 --
 
-local M = require 'lem.streams.core'
+local io = require 'lem.io.core'
 
 do
 	local type = type
-	local parsers = M.parsers
+	local parsers = io.parsers
 	local parser_available = parsers.available
 	parsers.available = nil
 	local parser_target = parsers.target
 	parsers.target = nil
 
-	function M.reader(readp)
+	function io.reader(readp)
 		return function(self, fmt, ...)
 			if fmt == nil then
 				return readp(self, parser_available)
@@ -42,10 +42,18 @@ do
 		end
 	end
 
-	M.IStream.read = M.reader(M.IStream.readp)
-	M.File.read = M.reader(M.File.readp)
+	io.IStream.read = io.reader(io.IStream.readp)
+	io.File.read = io.reader(io.File.readp)
 end
 
-return M
+do
+	local _write, stdout = io.OStream.write, io.stdout
+
+	function io.write(str)
+		return _write(stdout, str)
+	end
+end
+
+return io
 
 -- vim: ts=2 sw=2 noet:

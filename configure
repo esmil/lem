@@ -2158,7 +2158,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 ac_config_headers="$ac_config_headers libev/ev-config.h:ev-config.h.in"
 
 
-headers='lem.h streams.h'
+headers='lem.h lem-io.h'
 
 objects='bin/lem.o'
 

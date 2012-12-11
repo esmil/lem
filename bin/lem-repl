@@ -17,14 +17,14 @@
 -- along with LEM.  If not, see <http://www.gnu.org/licenses/>.
 --
 
-local streams = require 'lem.streams'
-local repl    = require 'lem.repl'
+local io   = require 'lem.io'
+local repl = require 'lem.repl'
 
-streams.stdout:write([[
+io.stdout:write([[
 A Lua Event Machine 0.3  Copyright 2011-2012 Emil Renner Berthing
 ]])
 
-local _, err = repl.repl('stdin', streams.stdin, streams.stdout)
+local _, err = repl.repl('stdin', io.stdin, io.stdout)
 print(err or '')
 
 -- vim: syntax=lua ts=2 sw=2 noet:

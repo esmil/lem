@@ -5,7 +5,7 @@ builtin_lua_version='5.2'
 AC_LANG(C)
 AC_CONFIG_HEADERS([libev/ev-config.h:ev-config.h.in])
 
-AC_SUBST([headers], ['lem.h streams.h'])
+AC_SUBST([headers], ['lem.h lem-io.h'])
 AC_SUBST([objects], ['bin/lem.o'])
 AC_SUBST([SHARED], ['-shared'])
 
