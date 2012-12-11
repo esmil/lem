@@ -91,11 +91,8 @@ file_close(lua_State *T)
 	lem_debug("collecting %d", f->fd);
 	ret = close(f->fd);
 	f->fd = -1;
-	if (ret) {
-		lua_pushnil(T);
-		lua_pushstring(T, strerror(errno));
-		return 2;
-	}
+	if (ret)
+		return io_strerror(T, errno);
 
 	lua_pushboolean(T, 1);
 	return 1;
@@ -214,9 +211,7 @@ file_write_reap(struct lem_async *a)
 
 	f->a.T = NULL;
 	if (f->ret) {
-		lua_pushnil(T);
-		lua_pushstring(T, strerror(f->ret));
-		lem_queue(T, 2);
+		lem_queue(T, io_strerror(T, f->ret));
 		return;
 	}
 
@@ -274,9 +269,7 @@ file_seek_reap(struct lem_async *a)
 	f->a.T = NULL;
 
 	if (f->ret) {
-		lua_pushnil(T);
-		lua_pushstring(T, strerror(f->ret));
-		lem_queue(T, 2);
+		lem_queue(T, io_strerror(T, f->ret));
 		return;
 	}
 

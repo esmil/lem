@@ -64,17 +64,13 @@ server_close(lua_State *T)
 
 	lem_debug("closing server..");
 
-	if (close(w->fd)) {
-		lua_pushnil(T);
-		lua_pushstring(T, strerror(errno));
-		ret = 2;
-	} else {
-		lua_pushboolean(T, 1);
-		ret = 1;
-	}
-
+	ret = close(w->fd);
 	w->fd = -1;
-	return ret;
+	if (ret)
+		return io_strerror(T, errno);
+
+	lua_pushboolean(T, 1);
+	return 1;
 }
 
 static int

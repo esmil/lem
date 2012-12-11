@@ -83,11 +83,8 @@ stream_close(lua_State *T)
 
 	ret = close(s->r.fd);
 	s->r.fd = s->w.fd = -1;
-	if (ret) {
-		lua_pushnil(T);
-		lua_pushstring(T, strerror(errno));
-		return 2;
-	}
+	if (ret)
+		return io_strerror(T, errno);
 
 	lua_pushboolean(T, 1);
 	return 1;
@@ -132,9 +129,7 @@ stream__readp(lua_State *T, struct stream *s)
 	if (res == LEM_PCLOSED)
 		return io_closed(T);
 
-	lua_pushnil(T);
-	lua_pushstring(T, strerror(err));
-	return 2;
+	return io_strerror(T, err);
 }
 
 static void
@@ -220,9 +215,7 @@ stream__write(lua_State *T, struct stream *s)
 	if (bytes == 0 || err == ECONNRESET || err == EPIPE)
 		return io_closed(T);
 
-	lua_pushnil(T);
-	lua_pushstring(T, strerror(err));
-	return 2;
+	return io_strerror(T, err);
 }
 
 static void
@@ -290,11 +283,8 @@ stream_setcork(lua_State *T, int state)
 	if (s->w.data != NULL)
 		return io_busy(T);
 
-	if (setsockopt(s->w.fd, IPPROTO_TCP, TCP_CORK, &state, sizeof(int))) {
-		lua_pushnil(T);
-		lua_pushstring(T, strerror(errno));
-		return 2;
-	}
+	if (setsockopt(s->w.fd, IPPROTO_TCP, TCP_CORK, &state, sizeof(int)))
+		return io_strerror(T, errno);
 
 	lua_pushboolean(T, 1);
 	return 1;
@@ -382,9 +372,7 @@ stream__sendfile(lua_State *T, struct stream *s, struct sendfile *sf)
 	if (errno == EAGAIN)
 		return 0;
 
-	lua_pushnil(T);
-	lua_pushstring(T, strerror(errno));
-	return 2;
+	return io_strerror(T, errno);
 }
 
 static void
@@ -462,17 +450,16 @@ stream_popen(lua_State *T)
 	if (mode[0] != 'r' && mode[0] != 'w')
 		return luaL_error(T, "invalid mode string");
 
-	if (pipe(fd)) {
-		err = errno;
-		goto error;
-	}
+	if (pipe(fd))
+		return io_strerror(T, errno);
 
 	switch (fork()) {
 	case -1: /* error */
 		err = errno;
 		close(fd[0]);
 		close(fd[1]);
-		goto error;
+		return io_strerror(T, err);
+
 	case 0: /* child */
 		if (mode[0] == 'r') {
 			close(fd[0]);
@@ -490,13 +477,13 @@ stream_popen(lua_State *T)
 		if (close(fd[1])) {
 			err = errno;
 			close(fd[0]);
-			goto error;
+			return io_strerror(T, err);
 		}
 	} else {
 		if (close(fd[0])) {
 			err = errno;
 			close(fd[1]);
-			goto error;
+			return io_strerror(T, err);
 		}
 		fd[0] = fd[1];
 	}
@@ -505,13 +492,9 @@ stream_popen(lua_State *T)
 	if (fcntl(fd[0], F_SETFL, O_NONBLOCK) < 0) {
 		err = errno;
 		close(fd[0]);
-		goto error;
+		return io_strerror(T, err);
 	}
 
 	stream_new(T, fd[0], lua_upvalueindex(1));
 	return 1;
-error:
-	lua_pushnil(T);
-	lua_pushstring(T, strerror(err));
-	return 2;
 }

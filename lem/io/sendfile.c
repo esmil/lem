@@ -30,28 +30,13 @@ sendfile_open(lua_State *T)
 	struct lem_sendfile *f;
 
 	fd = open(path, O_RDONLY | O_NONBLOCK);
-	if (fd < 0) {
-		int err = errno;
-
-		lua_pushnil(T);
-		switch (err) {
-		case ENOENT:
-			lua_pushliteral(T, "not found");
-			break;
-		case EACCES:
-			lua_pushliteral(T, "permission denied");
-			break;
-		default:
-			lua_pushstring(T, strerror(err));
-		}
-		return 2;
-	}
+	if (fd < 0)
+		return io_strerror(T, errno);
 
 	if (fstat(fd, &buf)) {
-		lua_pushnil(T);
-		lua_pushstring(T, strerror(errno));
-		(void)close(fd);
-		return 2;
+		int err = errno;
+		close(fd);
+		return io_strerror(T, err);
 	}
 
 	/* create userdata and set the metatable */
@@ -71,10 +56,9 @@ sendfile_gc(lua_State *T)
 {
 	struct lem_sendfile *f = lua_touserdata(T, 1);
 
-	if (f->fd < 0)
-		return 0;
+	if (f->fd >= 0)
+		close(f->fd);
 
-	(void)close(f->fd);
 	return 0;
 }
 
@@ -82,19 +66,18 @@ static int
 sendfile_close(lua_State *T)
 {
 	struct lem_sendfile *f;
+	int ret;
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
 	f = lua_touserdata(T, 1);
 	if (f->fd < 0)
 		return io_closed(T);
 
-	if (close(f->fd)) {
-		lua_pushnil(T);
-		lua_pushstring(T, strerror(errno));
-		return 2;
-	}
-
+	ret = close(f->fd);
 	f->fd = -1;
+	if (ret)
+		return io_strerror(T, errno);
+
 	lua_pushboolean(T, 1);
 	return 1;
 }

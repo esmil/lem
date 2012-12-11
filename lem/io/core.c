@@ -54,6 +54,14 @@ io_busy(lua_State *T)
 	return 2;
 }
 
+static int
+io_strerror(lua_State *T, int err)
+{
+	lua_pushnil(T);
+	lua_pushstring(T, strerror(err));
+	return 2;
+}
+
 #include "sendfile.c"
 #include "file.c"
 #include "stream.c"
@@ -155,9 +163,7 @@ io_open_reap(struct lem_async *a)
 	case 0: file_new(T, fd, 2); break;
 	case 1: stream_new(T, fd, 3); break;
 	default:
-		lua_pushnil(T);
-		lua_pushstring(T, strerror(-ret));
-		lem_queue(T, 2);
+		lem_queue(T, io_strerror(T, -ret));
 		return;
 	}
 
