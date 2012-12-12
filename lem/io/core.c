@@ -362,7 +362,7 @@ luaopen_lem_io_core(lua_State *L)
 	lua_pushcclosure(L, stream_popen, 1);
 	lua_setfield(L, -2, "popen");
 
-	/* insert the connect function */
+	/* insert the tcp_connect function */
 	lua_getfield(L, -1, "Stream"); /* upvalue 1 = Stream */
 	lua_pushcclosure(L, tcp_connect, 1);
 	lua_setfield(L, -2, "tcp_connect");

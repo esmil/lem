@@ -16,25 +16,59 @@
  * along with LEM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-static void
-tcp_connect_cb(EV_P_ struct ev_io *w, int revents)
-{
-	(void)revents;
+struct tcp_getaddr {
+	struct lem_async a;
+	const char *node;
+	const char *service;
+	int sock;
+	int err;
+};
 
-	lem_debug("connection established");
-	ev_io_stop(EV_A_ w);
-	lem_queue(w->data, 1);
-	w->data = NULL;
-}
+static const int tcp_famnumber[] = { AF_UNSPEC, AF_INET, AF_INET6 };
+static const char *const tcp_famnames[] = { "any", "ipv4", "ipv6", NULL };
 
 static int
-tcp_connect(lua_State *T)
+tcp_connect_try(struct tcp_getaddr *g, struct addrinfo *addr)
 {
-	const char *addr = luaL_checkstring(T, 1);
-	uint16_t port = (uint16_t)luaL_checknumber(T, 2);
+	int sock = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+
+	lem_debug("addr->ai_family = %d, sock = %d", addr->ai_family, sock);
+	if (sock < 0) {
+		int err = errno;
+
+		if (err == EAFNOSUPPORT || err == EPROTONOSUPPORT)
+			return 0;
+
+		g->sock = -2;
+		g->err = err;
+		return 1;
+	}
+
+	/* connect */
+	if (connect(sock, addr->ai_addr, addr->ai_addrlen)) {
+		close(sock);
+		return 0;
+	}
+
+	/* make the socket non-blocking */
+	if (fcntl(sock, F_SETFL, O_NONBLOCK)) {
+		g->sock = -3;
+		g->err = errno;
+		close(sock);
+		return 1;
+	}
+
+	g->sock = sock;
+	return 1;
+}
+
+static void
+tcp_connect_work(struct lem_async *a)
+{
+	struct tcp_getaddr *g = (struct tcp_getaddr *)a;
 	struct addrinfo hints = {
 		.ai_flags     = 0,
-		.ai_family    = AF_UNSPEC,
+		.ai_family    = tcp_famnumber[g->sock],
 		.ai_socktype  = SOCK_STREAM,
 		.ai_protocol  = IPPROTO_TCP,
 		.ai_addrlen   = 0,
@@ -42,85 +76,87 @@ tcp_connect(lua_State *T)
 		.ai_canonname = NULL,
 		.ai_next      = NULL
 	};
-	struct addrinfo *ainfo;
-	int sock;
+	struct addrinfo *result;
+	struct addrinfo *addr;
 	int ret;
-	struct stream *s;
 
 	/* lookup name */
-	ret = getaddrinfo(addr, NULL, &hints, &ainfo);
-	if (ret != 0) {
-		lua_pushnil(T);
-		lua_pushfstring(T, "error looking up \"%s\": %s",
-		                addr, gai_strerror(ret));
-		return 2;
+	ret = getaddrinfo(g->node, g->service, &hints, &result);
+	if (ret) {
+		g->sock = -1;
+		g->err = ret;
+		return;
 	}
 
 	/* create the TCP socket */
-	switch (ainfo->ai_family) {
-	case AF_INET:
-		((struct sockaddr_in *)ainfo->ai_addr)->sin_port = htons(port);
-		sock = socket(PF_INET, ainfo->ai_socktype, ainfo->ai_protocol);
-		break;
-
-	case AF_INET6:
-		((struct sockaddr_in6 *)ainfo->ai_addr)->sin6_port = htons(port);
-		sock = socket(PF_INET6, ainfo->ai_socktype, ainfo->ai_protocol);
-		break;
-
-	default:
-		freeaddrinfo(ainfo);
-		lua_pushnil(T);
-		lua_pushfstring(T, "getaddrinfo() returned neither "
-		                "IPv4 or IPv6 address for \"%s\"",
-				addr);
-		return 2;
+	for (addr = result; addr; addr = addr->ai_next) {
+		if (tcp_connect_try(g, addr))
+			break;
 	}
 
-	lem_debug("sock = %d", sock);
+	freeaddrinfo(result);
+	if (addr == NULL)
+		g->sock = -4;
+}
 
-	if (sock < 0) {
-		freeaddrinfo(ainfo);
-		lua_pushnil(T);
-		lua_pushfstring(T, "error creating TCP socket: %s",
-		                strerror(errno));
-		return 2;
+static void
+tcp_connect_reap(struct lem_async *a)
+{
+	struct tcp_getaddr *g = (struct tcp_getaddr *)a;
+	lua_State *T = g->a.T;
+	const char *node = g->node;
+	const char *service = g->service;
+	int sock = g->sock;
+	int err = g->err;
+
+	free(g);
+
+	lem_debug("connection established");
+	if (sock >= 0) {
+		stream_new(T, sock, 2);
+		lem_queue(T, 1);
+		return;
 	}
 
-	/* make the socket non-blocking */
-	if (fcntl(sock, F_SETFL, O_NONBLOCK) < 0) {
-		close(sock);
-		freeaddrinfo(ainfo);
-		lua_pushnil(T);
+	lua_pushnil(T);
+	switch (-sock) {
+	case 1:
+		lua_pushfstring(T, "error looking up '%s:%s': %s",
+				node, service, gai_strerror(err));
+		break;
+	case 2:
+		lua_pushfstring(T, "error creating socket: %s",
+				strerror(err));
+		break;
+	case 3:
 		lua_pushfstring(T, "error making socket non-blocking: %s",
-		                strerror(errno));
-		return 2;
+		                strerror(err));
+		break;
+	case 4:
+		lua_pushfstring(T, "error connecting to '%s:%s'",
+				node, service);
+		break;
 	}
+	lem_queue(T, 2);
+}
+
+static int
+tcp_connect(lua_State *T)
+{
+	const char *node = luaL_checkstring(T, 1);
+	const char *service = luaL_checkstring(T, 2);
+	int family = luaL_checkoption(T, 3, "any", tcp_famnames);
+	struct tcp_getaddr *g;
+
+	g = lem_xmalloc(sizeof(struct tcp_getaddr));
+	g->node = node;
+	g->service = service;
+	g->sock = family;
+	lem_async_do(&g->a, T, tcp_connect_work, tcp_connect_reap);
 
 	lua_settop(T, 1);
-	s = stream_new(T, sock, lua_upvalueindex(1));
-
-	/* connect */
-	ret = connect(sock, ainfo->ai_addr, ainfo->ai_addrlen);
-	freeaddrinfo(ainfo);
-	if (ret == 0) {
-		lem_debug("connection established");
-		return 2;
-	}
-
-	if (errno == EINPROGRESS) {
-		lem_debug("EINPROGRESS");
-		s->w.data = T;
-		s->w.cb = tcp_connect_cb;
-		ev_io_start(LEM_ &s->w);
-		return lua_yield(T, 2);
-	}
-
-	close(sock);
-	lua_pushnil(T);
-	lua_pushfstring(T, "error connecting to %s:%d: %s",
-			addr, (int)port, strerror(errno));
-	return 2;
+	lua_pushvalue(T, lua_upvalueindex(1));
+	return lua_yield(T, 2);
 }
 
 static int
