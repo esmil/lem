@@ -93,6 +93,142 @@ module_index(lua_State *T)
 	return 1;
 }
 
+struct open {
+	struct lem_async a;
+	const char *path;
+	int fd;
+	int flags;
+};
+
+static void
+io_open_work(struct lem_async *a)
+{
+	struct open *o = (struct open *)a;
+	int fd;
+	struct stat st;
+
+	fd = open(o->path, o->flags | O_NONBLOCK,
+			S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	if (fd < 0) {
+		o->flags = -errno;
+		return;
+	}
+
+	if (fstat(fd, &st)) {
+		o->flags = -errno;
+		close(fd);
+		return;
+	}
+
+	o->fd = fd;
+	lem_debug("st.st_mode & S_IFMT = %o", st.st_mode & S_IFMT);
+	switch (st.st_mode & S_IFMT) {
+	case S_IFREG:
+	case S_IFBLK:
+		o->flags = 0;
+		break;
+
+	case S_IFSOCK:
+	case S_IFCHR:
+	case S_IFIFO:
+		o->flags = 1;
+		break;
+
+	default:
+		o->flags = -EINVAL;
+		break;
+	}
+}
+
+static void
+io_open_reap(struct lem_async *a)
+{
+	struct open *o = (struct open *)a;
+	lua_State *T = o->a.T;
+	int fd = o->fd;
+	int ret = o->flags;
+
+	lem_debug("ret = %d", ret);
+	free(o);
+
+	switch (ret) {
+	case 0: file_new(T, fd, 2); break;
+	case 1: stream_new(T, fd, 3); break;
+	default:
+		lua_pushnil(T);
+		lua_pushstring(T, strerror(-ret));
+		lem_queue(T, 2);
+		return;
+	}
+
+	lem_queue(T, 1);
+}
+
+static int
+io_mode_to_flags(const char *mode)
+{
+	int omode;
+	int oflags;
+
+	switch (*mode++) {
+	case 'r':
+		omode = O_RDONLY;
+		oflags = 0;
+		break;
+	case 'w':
+		omode = O_WRONLY;
+		oflags = O_CREAT | O_TRUNC;
+		break;
+	case 'a':
+		omode = O_WRONLY;
+		oflags = O_CREAT | O_APPEND;
+		break;
+	default:
+		return -1;
+	}
+
+next:
+	switch (*mode++) {
+	case '\0':
+		break;
+	case '+':
+		omode = O_RDWR;
+		goto next;
+	case 'b':
+		/* this does nothing on *nix, but
+		 * don't treat it as an error */
+		goto next;
+	case 'x':
+		oflags |= O_EXCL;
+		goto next;
+	default:
+		return -1;
+	}
+
+	return omode | oflags;
+}
+
+static int
+io_open(lua_State *T)
+{
+	const char *path = luaL_checkstring(T, 1);
+	int flags = io_mode_to_flags(luaL_optstring(T, 2, "r"));
+	struct open *o;
+
+	if (flags < 0)
+		return luaL_error(T, "invalid mode string");
+
+	o = lem_xmalloc(sizeof(struct open));
+	o->path = path;
+	o->flags = flags;
+	lem_async_do(&o->a, T, io_open_work, io_open_reap);
+
+	lua_settop(T, 1);
+	lua_pushvalue(T, lua_upvalueindex(1));
+	lua_pushvalue(T, lua_upvalueindex(2));
+	return lua_yield(T, 3);
+}
+
 int
 luaopen_lem_io_core(lua_State *L)
 {
@@ -213,7 +349,7 @@ luaopen_lem_io_core(lua_State *L)
 	/* insert open function */
 	lua_getfield(L, -1, "File");   /* upvalue 1 = File */
 	lua_getfield(L, -2, "Stream"); /* upvalue 2 = Stream */
-	lua_pushcclosure(L, stream_open, 2);
+	lua_pushcclosure(L, io_open, 2);
 	lua_setfield(L, -2, "open");
 	/* insert popen function */
 	lua_getfield(L, -1, "Stream"); /* upvalue 1 = Stream */
