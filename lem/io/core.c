@@ -366,14 +366,10 @@ luaopen_lem_io_core(lua_State *L)
 	lua_getfield(L, -1, "Stream"); /* upvalue 1 = Stream */
 	lua_pushcclosure(L, tcp_connect, 1);
 	lua_setfield(L, -2, "tcp_connect");
-	/* insert the tcp4_listen function */
+	/* insert the tcp_listen function */
 	lua_getfield(L, -1, "Server"); /* upvalue 1 = Server */
-	lua_pushcclosure(L, tcp4_listen, 1);
-	lua_setfield(L, -2, "tcp4_listen");
-	/* insert the tcp6_listen function */
-	lua_getfield(L, -1, "Server"); /* upvalue 1 = Server */
-	lua_pushcclosure(L, tcp6_listen, 1);
-	lua_setfield(L, -2, "tcp6_listen");
+	lua_pushcclosure(L, tcp_listen, 1);
+	lua_setfield(L, -2, "tcp_listen");
 
 	/* create parser table */
 	lua_createtable(L, 0, 4);

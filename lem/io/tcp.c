@@ -159,125 +159,152 @@ tcp_connect(lua_State *T)
 	return lua_yield(T, 2);
 }
 
-static int
-tcp_listen(lua_State *T, struct sockaddr *address, socklen_t alen,
-              int sock, int backlog)
+static void
+tcp_listen_work(struct lem_async *a)
 {
-	struct ev_io *w;
-	int optval = 1;
+	struct tcp_getaddr *g = (struct tcp_getaddr *)a;
+	struct addrinfo hints = {
+		.ai_flags     = AI_PASSIVE,
+		.ai_family    = tcp_famnumber[g->sock],
+		.ai_socktype  = SOCK_STREAM,
+		.ai_protocol  = IPPROTO_TCP,
+		.ai_addrlen   = 0,
+		.ai_addr      = NULL,
+		.ai_canonname = NULL,
+		.ai_next      = NULL
+	};
+	struct addrinfo *addr = NULL;
+	int sock = -1;
+	int ret;
 
-	/* set SO_REUSEADDR option */
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
-	               &optval, sizeof(int))) {
-		close(sock);
-		lua_pushnil(T);
-		lua_pushfstring(T, "error setting SO_REUSEADDR on socket: %s",
-		                strerror(errno));
-		return 2;
+	/* lookup name */
+	ret = getaddrinfo(g->node, g->service, &hints, &addr);
+	if (ret) {
+		g->sock = -1;
+		g->err = ret;
+		goto error;
+	}
+
+	/* create the TCP socket */
+	sock = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+	lem_debug("addr->ai_family = %d, sock = %d", addr->ai_family, sock);
+	if (sock < 0) {
+		g->sock = -2;
+		g->err = errno;
+		goto error;
+	}
+
+	/* set SO_REUSEADDR option if possible */
+	ret = 1;
+	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &ret, sizeof(int));
+
+	/* bind */
+	if (bind(sock, addr->ai_addr, addr->ai_addrlen)) {
+		g->sock = -3;
+		g->err = errno;
+		goto error;
+	}
+	freeaddrinfo(addr);
+	addr = NULL;
+
+	/* listen to the socket */
+	if (listen(sock, g->err)) {
+		g->sock = -4;
+		g->err = errno;
+		goto error;
 	}
 
 	/* make the socket non-blocking */
-	if (fcntl(sock, F_SETFL, O_NONBLOCK) < 0) {
+	if (fcntl(sock, F_SETFL, O_NONBLOCK)) {
+		g->sock = -5;
+		g->err = errno;
+		goto error;
+	}
+
+	g->sock = sock;
+	return;
+
+error:
+	if (addr != NULL)
+		freeaddrinfo(addr);
+	if (sock >= 0)
 		close(sock);
-		lua_pushnil(T);
+}
+
+static void
+tcp_listen_reap(struct lem_async *a)
+{
+	struct tcp_getaddr *g = (struct tcp_getaddr *)a;
+	lua_State *T = g->a.T;
+	const char *node = g->node;
+	const char *service = g->service;
+	int sock = g->sock;
+	int err = g->err;
+
+	free(g);
+
+	if (sock >= 0) {
+		struct ev_io *w;
+
+		/* create userdata and set the metatable */
+		w = lua_newuserdata(T, sizeof(struct ev_io));
+		lua_pushvalue(T, 2);
+		lua_setmetatable(T, -2);
+
+		/* initialize userdata */
+		ev_io_init(w, NULL, sock, EV_READ);
+		w->data = NULL;
+		lem_queue(T, 1);
+		return;
+	}
+
+	lua_pushnil(T);
+	switch (-sock) {
+	case 1:
+		lua_pushfstring(T, "error looking up '%s:%s': %s",
+				node, service, gai_strerror(err));
+		break;
+	case 2:
+		lua_pushfstring(T, "error creating socket: %s",
+				strerror(err));
+		break;
+	case 3:
+		lua_pushfstring(T, "error binding to '%s:%s': %s",
+				node, service, strerror(err));
+		break;
+	case 4:
+		lua_pushfstring(T, "error listening on '%s:%s': %s",
+				node, service, strerror(err));
+		break;
+
+	case 5:
 		lua_pushfstring(T, "error making socket non-blocking: %s",
-		                strerror(errno));
-		return 2;
+		                strerror(err));
+		break;
 	}
+	lem_queue(T, 2);
+}
 
-	/* bind */
-	if (bind(sock, address, alen)) {
-		close(sock);
-		lua_pushnil(T);
-		lua_pushfstring(T, "error binding socket: %s",
-		                strerror(errno));
-		return 2;
-	}
+static int
+tcp_listen(lua_State *T)
+{
+	const char *node = luaL_checkstring(T, 1);
+	const char *service = luaL_checkstring(T, 2);
+	int family = luaL_checkoption(T, 3, "any", tcp_famnames);
+	int backlog = (int)luaL_optnumber(T, 4, MAXPENDING);
+	struct tcp_getaddr *g;
 
-	/* listen to the socket */
-	if (listen(sock, backlog) < 0) {
-		lua_pushnil(T);
-		lua_pushfstring(T, "error listening to the socket: %s",
-		                strerror(errno));
-		return 2;
-	}
+	if (node[0] == '*' && node[1] == '\0')
+		node = "0.0.0.0";
 
-	/* create userdata and set the metatable */
-	w = lua_newuserdata(T, sizeof(struct ev_io));
+	g = lem_xmalloc(sizeof(struct tcp_getaddr));
+	g->node = node;
+	g->service = service;
+	g->sock = family;
+	g->err = backlog;
+	lem_async_do(&g->a, T, tcp_listen_work, tcp_listen_reap);
+
+	lua_settop(T, 1);
 	lua_pushvalue(T, lua_upvalueindex(1));
-	lua_setmetatable(T, -2);
-
-	/* initialize userdata */
-	ev_io_init(w, NULL, sock, EV_READ);
-	w->data = NULL;
-
-	return 1;
-}
-
-static int
-tcp4_listen(lua_State *T)
-{
-	const char *addr = luaL_checkstring(T, 1);
-	uint16_t port = (uint16_t)luaL_checknumber(T, 2);
-	int backlog = (int)luaL_optnumber(T, 3, MAXPENDING);
-	int sock;
-	struct sockaddr_in address;
-
-	/* initialise the socketadr_in structure */
-	memset(&address, 0, sizeof(struct sockaddr_in));
-	address.sin_family = AF_INET;
-	if (addr[0] == '*' && addr[1] == '\0')
-		address.sin_addr.s_addr = INADDR_ANY;
-	else if (!inet_pton(AF_INET, addr, &address.sin_addr)) {
-		lua_pushnil(T);
-		lua_pushfstring(T, "cannot bind to '%s'", addr);
-		return 2;
-	}
-	address.sin_port = htons(port);
-
-	/* create the TCP socket */
-	sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (sock < 0) {
-		lua_pushnil(T);
-		lua_pushfstring(T, "error creating TCP socket: %s",
-		                strerror(errno));
-		return 2;
-	}
-
-	return tcp_listen(T, (struct sockaddr *)&address,
-	                     sizeof(struct sockaddr_in), sock, backlog);
-}
-
-static int
-tcp6_listen(lua_State *T)
-{
-	const char *addr = luaL_checkstring(T, 1);
-	uint16_t port = (uint16_t)luaL_checknumber(T, 2);
-	int backlog = (int)luaL_optnumber(T, 3, MAXPENDING);
-	int sock;
-	struct sockaddr_in6 address;
-
-	/* initialise the socketadr_in structure */
-	memset(&address, 0, sizeof(struct sockaddr_in6));
-	address.sin6_family = AF_INET6;
-	if (addr[0] == '*' && addr[1] == '\0')
-		address.sin6_addr = in6addr_any;
-	else if (!inet_pton(AF_INET6, addr, &address.sin6_addr)) {
-		lua_pushnil(T);
-		lua_pushfstring(T, "cannot bind to '%s'", addr);
-		return 2;
-	}
-	address.sin6_port = htons(port);
-
-	/* create the TCP socket */
-	sock = socket(PF_INET6, SOCK_STREAM, IPPROTO_TCP);
-	if (sock < 0) {
-		lua_pushnil(T);
-		lua_pushfstring(T, "error creating TCP socket: %s",
-		                strerror(errno));
-		return 2;
-	}
-
-	return tcp_listen(T, (struct sockaddr *)&address,
-	                     sizeof(struct sockaddr_in6), sock, backlog);
+	return lua_yield(T, 2);
 }

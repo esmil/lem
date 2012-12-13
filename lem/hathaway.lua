@@ -347,8 +347,8 @@ do
 		client:close()
 	end
 
-	function M.Hathaway(address, port)
-		local server, err = io.tcp4_listen(address, port)
+	function M.Hathaway(...)
+		local server, err = io.tcp_listen(...)
 		if not server then M.debug(err) return nil, err end
 
 		M.server = server
