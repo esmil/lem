@@ -16,8 +16,9 @@
  * along with LEM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define POOL_THREADS_MIN 1
 static unsigned int pool_jobs;
+static unsigned int pool_min;
+static unsigned int pool_max;
 static unsigned int pool_threads;
 static time_t pool_delay;
 static pthread_mutex_t pool_mutex;
@@ -54,13 +55,13 @@ pool_threadfunc(void *arg)
 
 		pthread_mutex_lock(&pool_mutex);
 		while ((a = pool_head) == NULL) {
-			if (pool_threads <= POOL_THREADS_MIN) {
+			if (pool_threads <= pool_min) {
 				pthread_cond_wait(&pool_cond, &pool_mutex);
 				continue;
 			}
 
 			if (pthread_cond_timedwait(&pool_cond, &pool_mutex, &ts)
-					&& pool_threads > POOL_THREADS_MIN)
+					&& pool_threads > pool_min)
 				goto out;
 		}
 		pool_head = a->next;
@@ -107,15 +108,17 @@ pool_cb(EV_A_ struct ev_async *w, int revents)
 }
 
 static int
-pool_init(time_t delay)
+pool_init(void)
 {
 	int ret;
 
 	/*
 	pool_jobs = 0;
+	pool_min = 0;
 	pool_threads = 0;
 	*/
-	pool_delay = delay;
+	pool_max = INT_MAX;
+	pool_delay = 10;
 	/*
 	pool_head = NULL;
 	pool_tail = NULL;
@@ -143,10 +146,38 @@ pool_init(time_t delay)
 	return 0;
 }
 
+static void
+pool_spawnthread(void)
+{
+	pthread_attr_t attr;
+	pthread_t thread;
+	int ret;
+
+	ret = pthread_attr_init(&attr);
+	if (ret)
+		goto error;
+
+	ret = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+	if (ret) {
+		pthread_attr_destroy(&attr);
+		goto error;
+	}
+
+	ret = pthread_create(&thread, &attr, pool_threadfunc, NULL);
+	pthread_attr_destroy(&attr);
+	if (ret)
+		goto error;
+
+	return;
+error:
+	lem_log_error("error spawning thread: %s", strerror(ret));
+	lem_exit(EXIT_FAILURE);
+}
+
 void
 lem_async_put(struct lem_async *a)
 {
-	int ret = 0;
+	int spawn = 0;
 
 	if (pool_jobs == 0)
 		ev_async_start(LEM_ &pool_watch);
@@ -162,33 +193,31 @@ lem_async_put(struct lem_async *a)
 		pool_tail->next = a;
 		pool_tail = a;
 	}
-	if (pool_jobs > pool_threads) {
+	if (pool_jobs > pool_threads && pool_threads < pool_max) {
 		pool_threads++;
-		ret = 1;
+		spawn = 1;
 	}
 	pthread_mutex_unlock(&pool_mutex);
 	pthread_cond_signal(&pool_cond);
-	if (ret) {
-		pthread_attr_t attr;
-		pthread_t thread;
+	if (spawn)
+		pool_spawnthread();
+}
 
-		ret = pthread_attr_init(&attr);
-		if (ret)
-			goto error;
+void
+lem_async_config(int delay, int min, int max)
+{
+	int spawn;
 
-		ret = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-		if (ret) {
-			pthread_attr_destroy(&attr);
-			goto error;
-		}
+	pool_delay = (time_t)delay;
+	pool_min = min;
+	pool_max = max;
 
-		ret = pthread_create(&thread, &attr, pool_threadfunc, NULL);
-		pthread_attr_destroy(&attr);
-		if (ret)
-			goto error;
-	}
-	return;
-error:
-	lem_log_error("error spawning thread: %s", strerror(ret));
-	lem_exit(EXIT_FAILURE);
+	pthread_mutex_lock(&pool_mutex);
+	spawn = min - pool_threads;
+	if (spawn > 0)
+		pool_threads = min;
+	pthread_mutex_unlock(&pool_mutex);
+
+	for (; spawn > 0; spawn--)
+		pool_spawnthread();
 }

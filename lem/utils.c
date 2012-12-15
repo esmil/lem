@@ -193,6 +193,31 @@ utils_updatenow(lua_State *T)
 	return 1;
 }
 
+static int
+utils_poolconfig(lua_State *T)
+{
+	lua_Number n;
+	int delay;
+	int min;
+	int max;
+
+	n = luaL_checknumber(T, 1);
+	delay = (int)n;
+	luaL_argcheck(T, (lua_Number)delay == n && delay >= 0,
+			1, "not an integer in proper range");
+	n = luaL_checknumber(T, 2);
+	min = (int)n;
+	luaL_argcheck(T, (lua_Number)min == n && min >= 0,
+			2, "not an integer in proper range");
+	n = luaL_checknumber(T, 3);
+	max = (int)n;
+	luaL_argcheck(T, (lua_Number)max == n && max > 0 && max >= min,
+			3, "not an integer in proper range");
+
+	lem_async_config(delay, min, max);
+	return 0;
+}
+
 int
 luaopen_lem_utils(lua_State *L)
 {
@@ -243,6 +268,10 @@ luaopen_lem_utils(lua_State *L)
 	/* set updatenow function */
 	lua_pushcfunction(L, utils_updatenow);
 	lua_setfield(L, -2, "updatenow");
+
+	/* set poolconfig function */
+	lua_pushcfunction(L, utils_poolconfig);
+	lua_setfield(L, -2, "poolconfig");
 
 	return 1;
 }

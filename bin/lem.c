@@ -334,7 +334,7 @@ main(int argc, char *argv[])
 	rq.mask = LEM_INITIAL_QUEUESIZE - 1;
 
 	/* initialize threadpool */
-	if (pool_init(10)) {
+	if (pool_init()) {
 		lem_log_error("Error initializing threadpool");
 		goto error;
 	}

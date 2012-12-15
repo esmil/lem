@@ -66,6 +66,7 @@ void lem_forgetthread(lua_State *T);
 void lem_queue(lua_State *T, int nargs);
 void lem_exit(int status);
 void lem_async_put(struct lem_async *a);
+void lem_async_config(int delay, int min, int max);
 
 static inline void
 lem_async_do(struct lem_async *a, lua_State *T,
