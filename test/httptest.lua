@@ -27,8 +27,8 @@ local concat = table.concat
 local done = false
 
 utils.spawn(function()
-	local conn = assert(io.tcp_connect('www.google.dk', 80))
-	--local conn = assert(io.tcp_connect('127.0.0.1', 8080))
+	local conn = assert(io.tcp.connect('www.google.dk', 80))
+	--local conn = assert(io.tcp.connect('127.0.0.1', 8080))
 
 	print('\nConnected.')
 

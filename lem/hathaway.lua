@@ -348,7 +348,7 @@ do
 	end
 
 	function M.Hathaway(...)
-		local server, err = io.tcp_listen(...)
+		local server, err = io.tcp.listen(...)
 		if not server then M.debug(err) return nil, err end
 
 		M.server = server
