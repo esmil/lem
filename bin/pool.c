@@ -21,6 +21,17 @@ static unsigned int pool_jobs;
 static unsigned int pool_threads;
 static time_t pool_delay;
 static pthread_mutex_t pool_mutex;
+#if _POSIX_SPIN_LOCKS >= 200112L
+static pthread_spinlock_t pool_dlock;
+#define pool_done_init()   pthread_spin_init(&pool_dlock, PTHREAD_PROCESS_PRIVATE)
+#define pool_done_lock()   pthread_spin_lock(&pool_dlock)
+#define pool_done_unlock() pthread_spin_unlock(&pool_dlock)
+#else
+static pthread_mutex_t pool_dlock;
+#define pool_done_init()   pthread_mutex_init(&pool_dlock, NULL)
+#define pool_done_lock()   pthread_mutex_lock(&pool_dlock)
+#define pool_done_unlock() pthread_mutex_unlock(&pool_dlock)
+#endif
 static pthread_cond_t pool_cond;
 static struct lem_async *pool_head;
 static struct lem_async *pool_tail;
@@ -59,10 +70,10 @@ pool_threadfunc(void *arg)
 		a->work(a);
 		lem_debug("Bye %p", a);
 
-		pthread_mutex_lock(&pool_mutex);
+		pool_done_lock();
 		a->next = pool_done;
 		pool_done = a;
-		pthread_mutex_unlock(&pool_mutex);
+		pool_done_unlock();
 
 		ev_async_send(LEM_ &pool_watch);
 	}
@@ -80,10 +91,10 @@ pool_cb(EV_A_ struct ev_async *w, int revents)
 
 	(void)revents;
 
-	pthread_mutex_lock(&pool_mutex);
+	pool_done_lock();
 	a = pool_done;
 	pool_done = NULL;
-	pthread_mutex_unlock(&pool_mutex);
+	pool_done_unlock();
 
 	for (; a; a = next) {
 		pool_jobs--;
@@ -114,8 +125,10 @@ pool_init(time_t delay)
 	ev_async_init(&pool_watch, pool_cb);
 
 	ret = pthread_mutex_init(&pool_mutex, NULL);
+	if (ret == 0)
+		ret = pool_done_init();
 	if (ret) {
-		lem_log_error("error initializing mutex: %s",
+		lem_log_error("error initializing lock: %s",
 				strerror(ret));
 		return -1;
 	}

@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <unistd.h>
 #include <signal.h>
 #include <stdio.h>
 #include <assert.h>
