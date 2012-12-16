@@ -21,15 +21,17 @@ struct file {
 	int fd;
 	int ret;
 	union {
-		struct lem_parser *p;
 		struct {
-			const char *out;
-			size_t out_size;
-		};
+			struct lem_parser *p;
+		} readp;
+		struct {
+			const char *str;
+			size_t len;
+		} write;
 		struct {
 			off_t offset;
 			int whence;
-		};
+		} seek;
 	};
 	struct lem_inputbuf buf;
 };
@@ -133,7 +135,8 @@ file_readp_reap(struct lem_async *a)
 
 		f->a.T = NULL;
 
-		if (f->p->destroy && (ret = f->p->destroy(T, &f->buf, res)) > 0) {
+		if (f->readp.p->destroy &&
+				(ret = f->readp.p->destroy(T, &f->buf, res)) > 0) {
 			lem_queue(T, ret);
 			return;
 		}
@@ -147,7 +150,7 @@ file_readp_reap(struct lem_async *a)
 		return;
 	}
 
-	ret = f->p->process(T, &f->buf);
+	ret = f->readp.p->process(T, &f->buf);
 	if (ret > 0) {
 		f->a.T = NULL;
 		lem_queue(T, ret);
@@ -183,7 +186,7 @@ file_readp(lua_State *T)
 	if (ret > 0)
 		return ret;
 
-	f->p = p;
+	f->readp.p = p;
 	lem_async_do(&f->a, T, file_readp_work, file_readp_reap);
 	return lua_yield(T, lua_gettop(T));
 }
@@ -195,7 +198,7 @@ static void
 file_write_work(struct lem_async *a)
 {
 	struct file *f = (struct file *)a;
-	ssize_t bytes = write(f->fd, f->out, f->out_size);
+	ssize_t bytes = write(f->fd, f->write.str, f->write.len);
 
 	if (bytes < 0)
 		f->ret = errno;
@@ -223,11 +226,11 @@ static int
 file_write(lua_State *T)
 {
 	struct file *f;
-	const char *out;
-	size_t out_size;
+	const char *str;
+	size_t len;
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
-	out = luaL_checklstring(T, 2, &out_size);
+	str = luaL_checklstring(T, 2, &len);
 
 	f = lua_touserdata(T, 1);
 	if (f->fd < 0)
@@ -235,8 +238,8 @@ file_write(lua_State *T)
 	if (f->a.T != NULL)
 		return io_busy(T);
 
-	f->out = out;
-	f->out_size = out_size;
+	f->write.str = str;
+	f->write.len = len;
 	lem_async_do(&f->a, T, file_write_work, file_write_reap);
 
 	lua_settop(T, 2);
@@ -250,12 +253,12 @@ static void
 file_seek_work(struct lem_async *a)
 {
 	struct file *f = (struct file *)a;
-	off_t bytes = lseek(f->fd, f->offset, f->whence);
+	off_t bytes = lseek(f->fd, f->seek.offset, f->seek.whence);
 
 	if (bytes == (off_t)-1) {
 		f->ret = errno;
 	} else {
-		f->offset = bytes;
+		f->seek.offset = bytes;
 		f->ret = 0;
 	}
 }
@@ -273,7 +276,7 @@ file_seek_reap(struct lem_async *a)
 		return;
 	}
 
-	lua_pushnumber(T, f->offset);
+	lua_pushnumber(T, f->seek.offset);
 	lem_queue(T, 1);
 }
 
@@ -290,15 +293,15 @@ file_seek(lua_State *T)
 	op = luaL_checkoption(T, 2, "cur", modenames);
 	offset = luaL_optnumber(T, 3, 0.);
 	f = lua_touserdata(T, 1);
-	f->offset = (off_t)offset;
-	luaL_argcheck(T, (lua_Number)f->offset == offset, 3,
+	f->seek.offset = (off_t)offset;
+	luaL_argcheck(T, (lua_Number)f->seek.offset == offset, 3,
 			"not an integer in proper range");
 	if (f->fd < 0)
 		return io_closed(T);
 	if (f->a.T != NULL)
 		return io_busy(T);
 
-	f->whence = mode[op];
+	f->seek.whence = mode[op];
 	lem_async_do(&f->a, T, file_seek_work, file_seek_reap);
 
 	lua_settop(T, 1);
