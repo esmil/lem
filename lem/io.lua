@@ -18,8 +18,11 @@
 
 local io = require 'lem.io.core'
 
+local type   = type
+local assert = assert
+local error  = error
+
 do
-	local type = type
 	local parsers = io.parsers
 	local parser_available = parsers.available
 	parsers.available = nil
@@ -47,10 +50,41 @@ do
 end
 
 do
-	local _write, stdout = io.Stream.write, io.stdout
+	local stdin = io.stdin
 
-	function io.write(str)
-		return _write(stdout, str)
+	function io.input(file)
+		if not file then return stdin end
+		if type(file) == 'string' then
+			stdin = assert(io.open(file))
+		else
+			stdin = file
+		end
+	end
+
+	function io.read(...)
+		return stdin:read(...)
+	end
+end
+
+do
+	local stdout = io.stdout
+
+	function io.output(file)
+		if not file then return stdout end
+		if type(file) == 'string' then
+			stdout = assert(io.open(file))
+		else
+			stdout = file
+		end
+	end
+
+	function io.write(...)
+		return stdout:write(...)
+	end
+
+	function io.close(file)
+		if not file then file = stdout end
+		return file:close()
 	end
 end
 

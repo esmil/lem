@@ -23,7 +23,7 @@ local io    = require 'lem.io'
 local write = io.write
 
 print("Press enter to read '" .. (arg[1] or arg[0]) .. "'")
-io.stdin:read()
+io.read()
 
 local threads = 2
 for i = 1, threads do
@@ -61,6 +61,6 @@ while threads > 0 do
 end
 
 print "\nDone. Press enter to continue."
-io.stdin:read()
+io.read()
 
 -- vim: set ts=2 sw=2 noet:
