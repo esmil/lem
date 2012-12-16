@@ -62,7 +62,6 @@ io_strerror(lua_State *T, int err)
 	return 2;
 }
 
-#include "sendfile.c"
 #include "file.c"
 #include "stream.c"
 #include "server.c"
@@ -240,28 +239,6 @@ luaopen_lem_io_core(lua_State *L)
 {
 	/* create module table */
 	lua_newtable(L);
-
-	/* create metatable for sendfile objects */
-	lua_newtable(L);
-	/* mt.__index = mt */
-	lua_pushvalue(L, -1);
-	lua_setfield(L, -2, "__index");
-	/* mt.__gc = <sendfile_gc> */
-	lua_pushcfunction(L, sendfile_gc);
-	lua_setfield(L, -2, "__gc");
-	/* mt.close = <sendfile_close> */
-	lua_pushcfunction(L, sendfile_close);
-	lua_setfield(L, -2, "close");
-	/* mt.size = <sendfile_size> */
-	lua_pushcfunction(L, sendfile_size);
-	lua_setfield(L, -2, "size");
-	/* insert table */
-	lua_setfield(L, -2, "SendFile");
-
-	/* insert sendfile function */
-	lua_getfield(L, -1, "SendFile"); /* upvalue 1 = SendFile */
-	lua_pushcclosure(L, sendfile_open, 1);
-	lua_setfield(L, -2, "sendfile");
 
 	/* create File metatable */
 	lua_newtable(L);

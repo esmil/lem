@@ -268,7 +268,7 @@ do
 			local headers = res.headers
 			local file, close = res.file, false
 			if type(file) == 'string' then
-				file, err = io.sendfile(file)
+				file, err = io.open(file)
 				if file then
 					close = true
 				else
@@ -329,7 +329,7 @@ do
 
 			if method ~= 'HEAD' then
 				if file then
-					ok, err = client:sendfile(file)
+					ok, err = client:sendfile(file, headers['Content-Length'])
 					if close then file:close() end
 				else
 					ok, err = client:write(concat(res))

@@ -35,6 +35,11 @@ struct file {
 			off_t offset;
 			int whence;
 		} seek;
+		struct {
+			struct stream *stream;
+			off_t size;
+			off_t offset;
+		} sendfile;
 	};
 	struct lem_inputbuf buf;
 };
