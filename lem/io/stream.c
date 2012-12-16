@@ -21,6 +21,7 @@ struct stream {
 	struct ev_io w;
 	const char *out;
 	size_t out_len;
+	int idx;
 	struct lem_parser *p;
 	struct lem_inputbuf buf;
 };
@@ -197,12 +198,15 @@ stream__write(lua_State *T, struct stream *s)
 	int err;
 
 	while ((bytes = write(s->w.fd, s->out, s->out_len)) > 0) {
+		s->out += bytes;
 		s->out_len -= bytes;
 		if (s->out_len == 0) {
-			lua_pushboolean(T, 1);
-			return 1;
+			if (s->idx == lua_gettop(T)) {
+				lua_pushboolean(T, 1);
+				return 1;
+			}
+			s->out = lua_tolstring(T, ++s->idx, &s->out_len);
 		}
-		s->out += bytes;
 	}
 	err = errno;
 
@@ -242,10 +246,15 @@ stream_write(lua_State *T)
 	struct stream *s;
 	const char *out;
 	size_t out_len;
+	int i;
+	int top;
 	int ret;
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
 	out = luaL_checklstring(T, 2, &out_len);
+	top = lua_gettop(T);
+	for (i = 3; i <= top; i++)
+		(void)luaL_checkstring(T, i);
 
 	s = lua_touserdata(T, 1);
 	if (s->w.fd < 0)
@@ -253,10 +262,9 @@ stream_write(lua_State *T)
 	if (s->w.data != NULL)
 		return io_busy(T);
 
-	lua_settop(T, 2);
-
 	s->out = out;
 	s->out_len = out_len;
+	s->idx = 2;
 	ret = stream__write(T, s);
 	if (ret > 0)
 		return ret;
@@ -264,7 +272,7 @@ stream_write(lua_State *T)
 	s->w.data = T;
 	s->w.cb = stream_write_cb;
 	ev_io_start(LEM_ &s->w);
-	return lua_yield(T, 2);
+	return lua_yield(T, top);
 }
 
 #ifndef TCP_CORK
