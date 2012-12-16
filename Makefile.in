@@ -27,12 +27,14 @@ llibs = \
 	lem/repl.lua \
 	lem/io.lua \
 	lem/io/queue.lua \
+	lem/lfs.lua \
 	lem/http.lua \
 	lem/hathaway.lua
 
 clibs = \
 	lem/utils.so \
 	lem/io/core.so \
+	lem/lfs/core.so \
 	lem/http/core.so
 
 ifdef V
