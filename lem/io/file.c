@@ -29,6 +29,9 @@ struct file {
 			size_t len;
 		} write;
 		struct {
+			off_t val;
+		} size;
+		struct {
 			off_t offset;
 			int whence;
 		} seek;
@@ -244,6 +247,58 @@ file_write(lua_State *T)
 
 	lua_settop(T, 2);
 	return lua_yield(T, 2);
+}
+
+/*
+ * file:size() method
+ */
+static void
+file_size_work(struct lem_async *a)
+{
+	struct file *f = (struct file *)a;
+	struct stat st;
+
+	if (fstat(f->fd, &st)) {
+		f->ret = errno;
+	} else {
+		f->ret = 0;
+		f->size.val = st.st_size;
+	}
+}
+
+static void
+file_size_reap(struct lem_async *a)
+{
+	struct file *f = (struct file *)a;
+	lua_State *T = f->a.T;
+
+	f->a.T = NULL;
+
+	if (f->ret) {
+		lem_queue(T, io_strerror(T, f->ret));
+		return;
+	}
+
+	lua_pushnumber(T, f->size.val);
+	lem_queue(T, 1);
+}
+
+static int
+file_size(lua_State *T)
+{
+	struct file *f;
+
+	luaL_checktype(T, 1, LUA_TUSERDATA);
+	f = lua_touserdata(T, 1);
+	if (f->fd < 0)
+		return io_closed(T);
+	if (f->a.T != NULL)
+		return io_busy(T);
+
+	lem_async_do(&f->a, T, file_size_work, file_size_reap);
+
+	lua_settop(T, 1);
+	return lua_yield(T, 1);
 }
 
 /*

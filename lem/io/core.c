@@ -283,6 +283,9 @@ luaopen_lem_io_core(lua_State *L)
 	/* mt.write = <file_write> */
 	lua_pushcfunction(L, file_write);
 	lua_setfield(L, -2, "write");
+	/* mt.size = <file_size> */
+	lua_pushcfunction(L, file_size);
+	lua_setfield(L, -2, "size");
 	/* mt.seek = <file_seek> */
 	lua_pushcfunction(L, file_seek);
 	lua_setfield(L, -2, "seek");
