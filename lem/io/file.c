@@ -37,6 +37,11 @@ struct file {
 			int whence;
 		} seek;
 		struct {
+			off_t start;
+			off_t len;
+			short type;
+		} lock;
+		struct {
 			struct stream *stream;
 			off_t size;
 			off_t offset;
@@ -376,6 +381,77 @@ file_seek(lua_State *T)
 
 	f->seek.whence = mode[op];
 	lem_async_do(&f->a, T, file_seek_work, file_seek_reap);
+
+	lua_settop(T, 1);
+	return lua_yield(T, 1);
+}
+
+/*
+ * file:lock() method
+ */
+static void
+file_lock_work(struct lem_async *a)
+{
+	struct file *f = (struct file *)a;
+	struct flock fl = {
+		.l_type = f->lock.type,
+		.l_whence = SEEK_SET,
+		.l_start = f->lock.start,
+		.l_len = f->lock.len,
+	};
+	int ret = fcntl(f->fd, F_SETLK, &fl);
+
+	if (ret == -1)
+		f->ret = errno;
+	else
+		f->ret = 0;
+}
+
+static void
+file_lock_reap(struct lem_async *a)
+{
+	struct file *f = (struct file *)a;
+	lua_State *T = f->a.T;
+
+	f->a.T = NULL;
+
+	if (f->ret) {
+		lem_queue(T, io_strerror(T, f->ret));
+		return;
+	}
+
+	lua_pushboolean(T, 1);
+	lem_queue(T, 1);
+}
+
+static int
+file_lock(lua_State *T)
+{
+	static const short mode[] = { F_RDLCK, F_WRLCK, F_UNLCK };
+	static const char *const modenames[] = { "r", "w", "u", NULL };
+	struct file *f;
+	int op;
+	lua_Number start;
+	lua_Number len;
+
+	luaL_checktype(T, 1, LUA_TUSERDATA);
+	op = luaL_checkoption(T, 2, NULL, modenames);
+	start = luaL_optnumber(T, 3, 0);
+	len = luaL_optnumber(T, 4, 0);
+	f = lua_touserdata(T, 1);
+	f->lock.start = (off_t)start;
+	luaL_argcheck(T, (lua_Number)f->lock.start == start, 3,
+			"not an integer in proper range");
+	f->lock.len = (off_t)len;
+	luaL_argcheck(T, (lua_Number)f->lock.len == len, 4,
+			"not an integer in proper range");
+	if (f->fd < 0)
+		return io_closed(T);
+	if (f->a.T != NULL)
+		return io_busy(T);
+
+	f->lock.type = mode[op];
+	lem_async_do(&f->a, T, file_lock_work, file_lock_reap);
 
 	lua_settop(T, 1);
 	return lua_yield(T, 1);

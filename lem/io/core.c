@@ -266,6 +266,9 @@ luaopen_lem_io_core(lua_State *L)
 	/* mt.seek = <file_seek> */
 	lua_pushcfunction(L, file_seek);
 	lua_setfield(L, -2, "seek");
+	/* mt.lock = <file_lock> */
+	lua_pushcfunction(L, file_lock);
+	lua_setfield(L, -2, "lock");
 	/* insert table */
 	lua_setfield(L, -2, "File");
 
