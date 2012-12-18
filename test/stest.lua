@@ -19,6 +19,9 @@
 
 print('Entered ' .. arg[0])
 
+package.path = '?.lua'
+package.cpath = '?.so'
+
 local utils = require 'lem.utils'
 local io    = require 'lem.io'
 

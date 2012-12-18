@@ -17,6 +17,9 @@
 -- along with LEM.  If not, see <http://www.gnu.org/licenses/>.
 --
 
+package.path = '?.lua'
+package.cpath = '?.so'
+
 local utils = require 'lem.utils'
 local io    = require 'lem.io'
 local lfs   = require 'lem.lfs'

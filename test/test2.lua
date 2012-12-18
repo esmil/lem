@@ -17,7 +17,10 @@
 -- along with LEM.  If not, see <http://www.gnu.org/licenses/>.
 --
 
-print 'Entered test.lua'
+print('Entered ' .. arg[0])
+
+package.path = '?.lua'
+package.cpath = '?.so'
 
 local utils = require 'lem.utils'
 
