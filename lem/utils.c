@@ -146,7 +146,7 @@ utils_exit(lua_State *T)
 {
 	int status = (int)luaL_checknumber(T, 1);
 	lem_exit(status);
-	return 0;
+	return lua_yield(T, 0);
 }
 
 static int
