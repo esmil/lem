@@ -113,7 +113,7 @@ tcp_connect_reap(struct lem_async *a)
 
 	lem_debug("connection established");
 	if (sock >= 0) {
-		stream_new(T, sock, 2);
+		stream_new(T, sock, 3);
 		lem_queue(T, 1);
 		return;
 	}
@@ -154,9 +154,9 @@ tcp_connect(lua_State *T)
 	g->sock = family;
 	lem_async_do(&g->a, T, tcp_connect_work, tcp_connect_reap);
 
-	lua_settop(T, 1);
+	lua_settop(T, 2);
 	lua_pushvalue(T, lua_upvalueindex(1));
-	return lua_yield(T, 2);
+	return lua_yield(T, 3);
 }
 
 static void
@@ -248,7 +248,7 @@ tcp_listen_reap(struct lem_async *a)
 
 		/* create userdata and set the metatable */
 		w = lua_newuserdata(T, sizeof(struct ev_io));
-		lua_pushvalue(T, 2);
+		lua_pushvalue(T, 3);
 		lua_setmetatable(T, -2);
 
 		/* initialize userdata */
@@ -304,7 +304,7 @@ tcp_listen(lua_State *T)
 	g->err = backlog;
 	lem_async_do(&g->a, T, tcp_listen_work, tcp_listen_reap);
 
-	lua_settop(T, 1);
+	lua_settop(T, 2);
 	lua_pushvalue(T, lua_upvalueindex(1));
-	return lua_yield(T, 2);
+	return lua_yield(T, 3);
 }
