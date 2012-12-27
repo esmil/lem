@@ -80,7 +80,12 @@ function http.Response:body()
 	end
 
 	local num = self.headers['Content-Length']
-	if not num then return nil, 'no content length specified' end
+	if not num then
+		if self.headers['Connection'] == 'close' then
+			return self.client:read('*a')
+		end
+		return nil, 'no content length specified'
+	end
 
 	num = tonumber(num)
 	if not num then return nil, 'invalid content length' end
