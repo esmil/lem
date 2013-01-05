@@ -176,8 +176,8 @@ tcp_listen_work(struct lem_async *a)
 {
 	struct tcp_getaddr *g = (struct tcp_getaddr *)a;
 	struct addrinfo hints = {
-		.ai_flags     = AI_CANONNAME | AI_PASSIVE,
-		.ai_family    = tcp_famnumber[g->sock],
+		.ai_flags     = AI_PASSIVE,
+		.ai_family    = g->sock,
 		.ai_socktype  = SOCK_STREAM,
 		.ai_protocol  = IPPROTO_TCP,
 		.ai_addrlen   = 0,
@@ -189,6 +189,9 @@ tcp_listen_work(struct lem_async *a)
 	int sock = -1;
 	int ret;
 	uint16_t port;
+
+	if (g->node != NULL)
+		hints.ai_flags |= AI_CANONNAME;
 
 	/* lookup name */
 	ret = getaddrinfo(g->node, g->service, &hints, &addr);
@@ -210,6 +213,10 @@ tcp_listen_work(struct lem_async *a)
 	/* set SO_REUSEADDR option if possible */
 	ret = 1;
 	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &ret, sizeof(int));
+#ifdef IPV6_V6ONLY
+	if (g->sock == AF_INET6)
+		setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &ret, sizeof(int));
+#endif
 
 	/* bind */
 	if (bind(sock, addr->ai_addr, addr->ai_addrlen)) {
@@ -254,6 +261,8 @@ tcp_listen_reap(struct lem_async *a)
 	lua_State *T = g->a.T;
 	int sock = g->sock;
 
+	if (g->node == NULL)
+		g->node = "*";
 
 	if (sock >= 0) {
 		struct addrinfo *result = g->result;
@@ -310,16 +319,15 @@ tcp_listen_reap(struct lem_async *a)
 }
 
 static int
-tcp_listen(lua_State *T)
+tcp_listen(lua_State *T, int family)
 {
 	const char *node = luaL_checkstring(T, 1);
 	const char *service = luaL_checkstring(T, 2);
-	int family = luaL_checkoption(T, 3, "any", tcp_famnames);
-	int backlog = (int)luaL_optnumber(T, 4, MAXPENDING);
+	int backlog = (int)luaL_optnumber(T, 3, MAXPENDING);
 	struct tcp_getaddr *g;
 
 	if (node[0] == '*' && node[1] == '\0')
-		node = "0.0.0.0";
+		node = NULL;
 
 	g = lem_xmalloc(sizeof(struct tcp_getaddr));
 	g->node = node;
@@ -331,4 +339,16 @@ tcp_listen(lua_State *T)
 	lua_settop(T, 2);
 	lua_pushvalue(T, lua_upvalueindex(1));
 	return lua_yield(T, 3);
+}
+
+static int
+tcp_listen4(lua_State *T)
+{
+	return tcp_listen(T, AF_INET);
+}
+
+static int
+tcp_listen6(lua_State *T)
+{
+	return tcp_listen(T, AF_INET6);
 }

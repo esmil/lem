@@ -16,7 +16,8 @@
 -- along with LEM.  If not, see <http://www.gnu.org/licenses/>.
 --
 
-local io = require 'lem.io.core'
+local utils = require 'lem.utils'
+local io    = require 'lem.io.core'
 
 local type   = type
 local assert = assert
@@ -85,6 +86,72 @@ do
 	function io.close(file)
 		if not file then file = stdout end
 		return file:close()
+	end
+end
+
+do
+	local MultiServer = {}
+	MultiServer.__index = MultiServer
+	io.MultiServer = MultiServer
+
+	function MultiServer:interrupt()
+		return self[1]:interrupt()
+	end
+
+	function MultiServer:close()
+		local rok, rerr = true
+		for i = 1, #self do
+			local ok, err = self[i]:close()
+			if not ok then
+				rok, rerr = ok, err
+			end
+		end
+		return rok, rerr
+	end
+
+
+	local function autospawn(self, i, handler)
+		local ok, err = self[i]:autospawn(handler)
+		if self.running then
+			self.running, self.ok, self.err = false, ok, err
+		end
+		for i = 1, #self do
+			self[i]:interrupt()
+		end
+	end
+
+	local spawn = utils.spawn
+
+	function MultiServer:autospawn(handler)
+		local n = #self
+
+		self.running = true
+		for i = 1, n-1 do
+			spawn(autospawn, self, i, handler)
+		end
+		autospawn(self, n, handler)
+
+		return self.ok, self.err
+	end
+
+	local setmetatable = setmetatable
+	local listen4, listen6 = io.tcp.listen4, io.tcp.listen6
+
+	function io.tcp.listen(host, port)
+		if host:match(':') then
+			return listen6(host, port)
+		end
+
+		local s6, err = listen6(host, port)
+		if s6 then
+			local s4 = listen4(host, port)
+			if s4 then
+				return setmetatable({ s6, s4 }, MultiServer)
+			end
+			return s6
+		else
+			return listen4(host, port)
+		end
 	end
 end
 

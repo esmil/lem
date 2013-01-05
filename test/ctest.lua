@@ -25,7 +25,7 @@ package.cpath = '?.so'
 local utils = require 'lem.utils'
 local io    = require 'lem.io'
 
-local conn = assert(io.tcp.connect('localhost', arg[1] or 8080))
+local conn = assert(io.tcp.connect('localhost', arg[1] or '8080'))
 
 for i = 1, 10 do
 	assert(conn:write('ping\n'))

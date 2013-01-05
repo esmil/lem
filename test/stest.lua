@@ -25,7 +25,7 @@ package.cpath = '?.so'
 local utils = require 'lem.utils'
 local io    = require 'lem.io'
 
-local server = assert(io.tcp.listen('*', arg[1] or 8080))
+local server = assert(io.tcp.listen('*', arg[1] or '8080'))
 
 --timer(10, function() exit(0) end)
 utils.spawn(function()
