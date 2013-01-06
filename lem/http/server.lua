@@ -140,7 +140,6 @@ do
 		local n = 0
 		return setmetatable({
 			headers = {},
-			status  = 200,
 			version = req.version,
 			add     = function(self, ...)
 				n = n + 1
@@ -198,9 +197,15 @@ do
 				end
 			end
 
-			if res.status == 200 and #res == 0 and res.file == nil then
-				res.status = 204
-			elseif headers['Content-Length'] == nil then
+			if not res.status then
+				if #res == 0 and file == nil then
+					res.status = 204
+				else
+					res.status = 200
+				end
+			end
+
+			if headers['Content-Length'] == nil and res.status ~= 204 then
 				local len
 				if file then
 					len = file:size()
@@ -220,6 +225,10 @@ do
 
 			if headers['Server'] == nil then
 				headers['Server'] = 'Hathaway/0.1 LEM/0.3'
+			end
+
+			if req.headers['Connection'] == 'close' and headers['Connection'] == nil then
+				headers['Connection'] = 'close'
 			end
 
 			local robe, i = {}, 1
@@ -251,7 +260,10 @@ do
 					ok, err = client:sendfile(file, headers['Content-Length'])
 					if close then file:close() end
 				else
-					ok, err = client:write(concat(res))
+					local body = concat(res)
+					if #body > 0 then
+						ok, err = client:write(body)
+					end
 				end
 				if not ok then self.debug('write', err) break end
 			end
@@ -260,7 +272,6 @@ do
 			if not ok then self.debug('uncork', err) break end
 
 		until version == '1.0'
-		   or req.headers['Connection'] == 'close'
 		   or headers['Connection'] == 'close'
 
 		client:close()
