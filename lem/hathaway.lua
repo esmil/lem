@@ -54,9 +54,10 @@ do
 			end
 		end
 
-		M.POST   = static_setter('POST')
-		M.PUT    = static_setter('PUT')
-		M.DELETE = static_setter('DELETE')
+		M.POST    = static_setter('POST')
+		M.PUT     = static_setter('PUT')
+		M.DELETE  = static_setter('DELETE')
+		M.OPTIONS = static_setter('OPTIONS')
 	end
 
 	function M.GETM(pattern, handler)
@@ -98,9 +99,10 @@ do
 			end
 		end
 
-		M.POSTM   = match_setter('POST')
-		M.PUTM    = match_setter('PUT')
-		M.DELETEM = match_setter('DELETE')
+		M.POSTM    = match_setter('POST')
+		M.PUTM     = match_setter('PUT')
+		M.DELETEM  = match_setter('DELETE')
+		M.OPTIONSM = match_setter('OPTIONS')
 	end
 
 	local Response = {}
@@ -179,10 +181,12 @@ function M.import(env)
 	env.POST     = M.POST
 	env.PUT      = M.PUT
 	env.DELETE   = M.DELETE
+	env.OPTIONS  = M.OPTIONS
 	env.GETM     = M.GETM
 	env.POSTM    = M.POSTM
 	env.PUTM     = M.PUTM
 	env.DELETEM  = M.DELETEM
+	env.OPTIONSM = M.OPTIONSM
 	env.Hathaway = M.Hathaway
 end
 
