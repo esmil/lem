@@ -1,6 +1,6 @@
 CC           = @CC@
 CFLAGS      ?= @CFLAGS@
-CFLAGS      += -Iinclude @CPPFLAGS@
+CFLAGS      += @CPPFLAGS_PRIVATE@ @CPPFLAGS@
 SHARED       = @SHARED@
 
 PKG_CONFIG   = @PKG_CONFIG@
@@ -81,6 +81,7 @@ lem.pc: lem.pc.in
 	  -e 's|@lmoddir[@]|$(lmoddir)|' \
 	  -e 's|@cmoddir[@]|$(cmoddir)|' \
 	  -e 's|@includedir[@]|$(includedir)|' \
+	  -e 's|@CPPFLAGS[@]|@CPPFLAGS@|' \
 	  $< > $@
 
 %-strip: %

@@ -8,6 +8,7 @@ AC_CONFIG_HEADERS([libev/ev-config.h:ev-config.h.in])
 AC_SUBST([headers], ['lem.h lem-io.h'])
 AC_SUBST([objects], ['bin/lem.o'])
 AC_SUBST([SHARED], ['-shared'])
+AC_SUBST([CPPFLAGS_PRIVATE], ['-Iinclude'])
 
 AC_ARG_WITH([lua],
   [AS_HELP_STRING([--with-lua],
@@ -88,7 +89,7 @@ AS_IF([test "x$with_lua" = 'xbuiltin'],
   [AC_SEARCH_LIBS([dlopen], [dl])]
   [objects="bin/lua.o $objects"]
   [headers="luaconf.h lua.h lauxlib.h $headers"]
-  [CPPFLAGS="$CPPFLAGS -Ilua"]
+  [CPPFLAGS_PRIVATE="$CPPFLAGS_PRIVATE -Ilua"]
   [AS_IF([test "x$lmoddir" = 'x'], [lmoddir="\${datarootdir}/lua/$builtin_lua_version"])]
   [AS_IF([test "x$cmoddir" = 'x'], [cmoddir="\${libdir}/lua/$builtin_lua_version"])])
 
@@ -107,7 +108,7 @@ AC_CHECK_HEADERS([sys/eventfd.h sys/epoll.h sys/event.h])
 
 objects="bin/libev.o $objects"
 headers="ev-config.h ev.h $headers"
-CPPFLAGS="$CPPFLAGS -Ilibev"
+CPPFLAGS_PRIVATE="$CPPFLAGS_PRIVATE -Ilibev"
 
 AS_IF([test "x$ac_cv_header_sys_eventfd_h" = 'xyes'],
   [AC_CHECK_FUNC([eventfd],

@@ -660,6 +660,7 @@ build
 pkgconfigdir
 cmoddir
 lmoddir
+CPPFLAGS_PRIVATE
 SHARED
 objects
 headers
@@ -2163,6 +2164,8 @@ headers='lem.h lem-io.h'
 objects='bin/lem.o'
 
 SHARED='-shared'
+
+CPPFLAGS_PRIVATE='-Iinclude'
 
 
 
@@ -4716,7 +4719,7 @@ fi
 
   objects="bin/lua.o $objects"
   headers="luaconf.h lua.h lauxlib.h $headers"
-  CPPFLAGS="$CPPFLAGS -Ilua"
+  CPPFLAGS_PRIVATE="$CPPFLAGS_PRIVATE -Ilua"
   if test "x$lmoddir" = 'x'; then :
   lmoddir="\${datarootdir}/lua/$builtin_lua_version"
 fi
@@ -4764,7 +4767,7 @@ done
 
 objects="bin/libev.o $objects"
 headers="ev-config.h ev.h $headers"
-CPPFLAGS="$CPPFLAGS -Ilibev"
+CPPFLAGS_PRIVATE="$CPPFLAGS_PRIVATE -Ilibev"
 
 if test "x$ac_cv_header_sys_eventfd_h" = 'xyes'; then :
   ac_fn_c_check_func "$LINENO" "eventfd" "ac_cv_func_eventfd"
