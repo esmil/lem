@@ -91,9 +91,8 @@ function M.not_found(req, res)
 ]])
 end
 
-do
-	local function htmlerror(num, text)
-		local str = format([[
+function M.htmlerror(num, text)
+	local str = format([[
 <?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
@@ -104,18 +103,18 @@ do
 </body>
 </html>
 ]], text, text)
-		return function(req, res)
-			res.status = num
-			res.headers['Content-Type'] = 'text/html; charset=UTF-8'
-			res.headers['Connection'] = 'close'
-			res:add(str)
-		end
+	return function(req, res)
+		res.status = num
+		res.headers['Content-Type'] = 'text/html; charset=UTF-8'
+		res.headers['Connection'] = 'close'
+		res:add(str)
 	end
-
-	M.method_not_allowed = htmlerror(405, 'Method Not Allowed')
-	M.expectation_failed = htmlerror(417, 'Expectation Failed')
-	M.version_not_supported = htmlerror(505, 'HTTP Version Not Supported')
 end
+
+M.method_not_allowed = M.htmlerror(405, 'Method Not Allowed')
+M.expectation_failed = M.htmlerror(417, 'Expectation Failed')
+M.version_not_supported = M.htmlerror(505, 'HTTP Version Not Supported')
+M.bad_request = M.htmlerror(400, 'Bad Request')
 
 function M.debug() end
 
