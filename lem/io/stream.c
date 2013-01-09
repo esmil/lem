@@ -310,15 +310,24 @@ stream_uncork(lua_State *T)
 	return stream_setcork(T, 0);
 }
 
+struct sfhandle {
+	struct lem_async a;
+	struct stream *s;
+	off_t size;
+	off_t offset;
+	int fd;
+	int ret;
+};
+
 static void
 stream_sendfile_work(struct lem_async *a)
 {
-	struct file *f = (struct file *)a;
-	struct stream *s = f->sendfile.stream;
+	struct sfhandle *sf = (struct sfhandle *)a;
+	struct stream *s = sf->s;
 
 	/* make socket blocking */
 	if (fcntl(s->w.fd, F_SETFL, 0)) {
-		f->ret = errno;
+		sf->ret = errno;
 		close(s->w.fd);
 		s->r.fd = s->w.fd = -1;
 		return;
@@ -326,40 +335,40 @@ stream_sendfile_work(struct lem_async *a)
 
 #ifdef __FreeBSD__
 	off_t written;
-	int ret = sendfile(f->fd, s->w.fd,
-			f->sendfile.offset, f->sendfile.size,
+	int ret = sendfile(sf->fd, s->w.fd,
+			sf->offset, sf->size,
 			NULL, &written, SF_SYNC);
 	if (ret == 0) {
-		f->ret = 0;
-		f->sendfile.size = written;
+		sf->ret = 0;
+		sf->size = written;
 	} else
-		f->ret = errno;
+		sf->ret = errno;
 	lem_debug("wrote = %ld bytes", written);
 #else
 #ifdef __APPLE__
-	int ret = sendfile(f->fd, s->w.fd,
-			f->sendfile.offset, &f->sendfile.size,
+	int ret = sendfile(sf->fd, s->w.fd,
+			sf->offset, &sf->size,
 			NULL, 0);
 	if (ret == 0)
-		f->ret = 0;
+		sf->ret = 0;
 	else
-		f->ret = errno;
-	lem_debug("wrote = %lld bytes", f->sendfile.size);
+		sf->ret = errno;
+	lem_debug("wrote = %lld bytes", sf->size);
 #else
-	ssize_t ret = sendfile(s->w.fd, f->fd,
-			&f->sendfile.offset, f->sendfile.size);
+	ssize_t ret = sendfile(s->w.fd, sf->fd,
+			&sf->offset, sf->size);
 	if (ret >= 0) {
-		f->ret = 0;
-		f->sendfile.size = ret;
+		sf->ret = 0;
+		sf->size = ret;
 	} else
-		f->ret = errno;
+		sf->ret = errno;
 	lem_debug("wrote = %ld bytes", ret);
 #endif
 #endif
 
 	/* make socket non-blocking again */
 	if (fcntl(s->w.fd, F_SETFL, O_NONBLOCK)) {
-		f->ret = errno;
+		sf->ret = errno;
 		close(s->w.fd);
 		s->r.fd = s->w.fd = -1;
 		return;
@@ -369,19 +378,20 @@ stream_sendfile_work(struct lem_async *a)
 static void
 stream_sendfile_reap(struct lem_async *a)
 {
-	struct file *f = (struct file *)a;
-	struct stream *s = f->sendfile.stream;
-	lua_State *T = f->a.T;
+	struct sfhandle *sf = (struct sfhandle *)a;
+	struct stream *s = sf->s;
+	lua_State *T = sf->a.T;
 	int ret;
 
-	if (f->ret == 0) {
-		lua_pushnumber(T, f->sendfile.size);
+	if (sf->ret == 0) {
+		lua_pushnumber(T, sf->size);
 		ret = 1;
 	} else {
-		ret = io_strerror(T, f->ret);
+		ret = io_strerror(T, sf->ret);
 	}
 
-	f->a.T = NULL;
+	free(sf);
+
 	s->w.data = NULL;
 	lem_queue(T, ret);
 }
@@ -393,6 +403,7 @@ stream_sendfile(lua_State *T)
 	struct file *f;
 	off_t size;
 	off_t offset;
+	struct sfhandle *sf;
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
 	luaL_checktype(T, 2, LUA_TUSERDATA);
@@ -411,17 +422,15 @@ stream_sendfile(lua_State *T)
 		lua_pushliteral(T, "file closed");
 		return 2;
 	}
-	if (f->a.T != NULL) {
-		lua_pushnil(T);
-		lua_pushliteral(T, "file busy");
-		return 2;
-	}
 
 	s->w.data = T;
-	f->sendfile.stream = s;
-	f->sendfile.size = size;
-	f->sendfile.offset = offset;
-	lem_async_do(&f->a, T, stream_sendfile_work, stream_sendfile_reap);
+
+	sf = lem_xmalloc(sizeof(struct sfhandle));
+	sf->s = s;
+	sf->size = size;
+	sf->offset = offset;
+	sf->fd = f->fd;
+	lem_async_do(&sf->a, T, stream_sendfile_work, stream_sendfile_reap);
 
 	lua_settop(T, 2);
 	return lua_yield(T, 2);

@@ -41,11 +41,6 @@ struct file {
 			off_t len;
 			short type;
 		} lock;
-		struct {
-			struct stream *stream;
-			off_t size;
-			off_t offset;
-		} sendfile;
 	};
 	struct lem_inputbuf buf;
 };
