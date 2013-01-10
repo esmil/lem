@@ -44,7 +44,7 @@ stream_new(lua_State *T, int fd, int mt)
 	s->closed = 0;
 	s->r.data = NULL;
 	s->w.data = NULL;
-	s->buf.start = s->buf.end = 0;
+	lem_inputbuf_init(&s->buf);
 
 	return s;
 }

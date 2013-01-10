@@ -49,4 +49,10 @@ struct lem_parser {
 	int (*destroy)(lua_State *T, struct lem_inputbuf *b, enum lem_preason reason);
 };
 
+static inline void
+lem_inputbuf_init(struct lem_inputbuf *buf)
+{
+	buf->start = buf->end = 0;
+}
+
 #endif

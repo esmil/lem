@@ -58,7 +58,7 @@ file_new(lua_State *T, int fd, int mt)
 	/* initialize userdata */
 	f->a.T = NULL;
 	f->fd = fd;
-	f->buf.start = f->buf.end = 0;
+	lem_inputbuf_init(&f->buf);
 
 	return f;
 }
