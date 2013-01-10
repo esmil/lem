@@ -75,7 +75,6 @@ static int
 stream_close(lua_State *T)
 {
 	struct stream *s;
-	int ret;
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
 	s = lua_touserdata(T, 1);
@@ -85,8 +84,7 @@ stream_close(lua_State *T)
 		return io_busy(T);
 
 	s->closed = 1;
-	ret = close(s->r.fd);
-	if (ret)
+	if (close(s->r.fd))
 		return io_strerror(T, errno);
 
 	lua_pushboolean(T, 1);
@@ -125,6 +123,9 @@ stream__readp(lua_State *T, struct stream *s)
 	else
 		res = LEM_PERROR;
 
+	s->closed = 1;
+	close(s->r.fd);
+
 	if (s->p->destroy && (ret = s->p->destroy(T, &s->buf, res)) > 0)
 		return ret;
 
@@ -144,9 +145,17 @@ stream_readp_cb(EV_P_ struct ev_io *w, int revents)
 
 	(void)revents;
 
-	ret = stream__readp(T, s);
-	if (ret == 0)
-		return;
+	if (s->closed) {
+		ret = 0;
+		if (s->p->destroy)
+			ret = s->p->destroy(T, &s->buf, LEM_PCLOSED);
+		if (ret <= 0)
+			ret = io_closed(T);
+	} else {
+		ret = stream__readp(T, s);
+		if (ret == 0)
+			return;
+	}
 
 	ev_io_stop(EV_A_ &s->r);
 	s->r.data = NULL;
@@ -233,9 +242,13 @@ stream_write_cb(EV_P_ struct ev_io *w, int revents)
 
 	(void)revents;
 
-	ret = stream__write(T, s);
-	if (ret == 0)
-		return;
+	if (s->closed)
+		ret = io_closed(T);
+	else {
+		ret = stream__write(T, s);
+		if (ret == 0)
+			return;
+	}
 
 	ev_io_stop(EV_A_ &s->w);
 	s->w.data = NULL;
@@ -330,8 +343,6 @@ stream_sendfile_work(struct lem_async *a)
 	/* make socket blocking */
 	if (fcntl(s->w.fd, F_SETFL, 0)) {
 		sf->ret = errno;
-		s->closed = 1;
-		close(s->w.fd);
 		return;
 	}
 
@@ -371,8 +382,6 @@ stream_sendfile_work(struct lem_async *a)
 	/* make socket non-blocking again */
 	if (fcntl(s->w.fd, F_SETFL, O_NONBLOCK)) {
 		sf->ret = errno;
-		s->closed = 1;
-		close(s->w.fd);
 		return;
 	}
 }
@@ -389,6 +398,9 @@ stream_sendfile_reap(struct lem_async *a)
 		lua_pushnumber(T, sf->size);
 		ret = 1;
 	} else {
+		if (!s->closed)
+			close(s->w.fd);
+		s->closed = 1;
 		ret = io_strerror(T, sf->ret);
 	}
 
