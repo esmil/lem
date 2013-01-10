@@ -1,6 +1,6 @@
 /*
  * This file is part of LEM, a Lua Event Machine.
- * Copyright 2011-2012 Emil Renner Berthing
+ * Copyright 2011-2013 Emil Renner Berthing
  *
  * LEM is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with LEM.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#include <lem-parsers.h>
 
 /*
  * read available data
@@ -173,3 +175,29 @@ static const struct lem_parser parser_line = {
 	.init    = parse_line_init,
 	.process = parse_line_process,
 };
+
+int
+luaopen_lem_parsers_core(lua_State *L)
+{
+	/* create module table */
+	lua_newtable(L);
+
+	/* create lookup table */
+	lua_createtable(L, 0, 4);
+	/* push parser_line */
+	lua_pushlightuserdata(L, (void *)&parser_available);
+	lua_setfield(L, -2, "available");
+	/* push parser_target */
+	lua_pushlightuserdata(L, (void *)&parser_target);
+	lua_setfield(L, -2, "target");
+	/* push parser_all */
+	lua_pushlightuserdata(L, (void *)&parser_all);
+	lua_setfield(L, -2, "*a");
+	/* push parser_line */
+	lua_pushlightuserdata(L, (void *)&parser_line);
+	lua_setfield(L, -2, "*l");
+	/* insert lookup table */
+	lua_setfield(L, -2, "lookup");
+
+	return 1;
+}

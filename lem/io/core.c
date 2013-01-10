@@ -36,7 +36,7 @@
 #include <sys/sendfile.h>
 #endif
 
-#include <lem-io.h>
+#include <lem-parsers.h>
 
 static int
 io_closed(lua_State *T)
@@ -66,7 +66,6 @@ io_strerror(lua_State *T, int err)
 #include "stream.c"
 #include "server.c"
 #include "tcp.c"
-#include "parsers.c"
 
 static int
 module_index(lua_State *T)
@@ -361,23 +360,6 @@ luaopen_lem_io_core(lua_State *L)
 	lua_setfield(L, -2, "listen6");
 	/* insert the tcp table */
 	lua_setfield(L, -2, "tcp");
-
-	/* create parser table */
-	lua_createtable(L, 0, 4);
-	/* push parser_line */
-	lua_pushlightuserdata(L, (void *)&parser_available);
-	lua_setfield(L, -2, "available");
-	/* push parser_target */
-	lua_pushlightuserdata(L, (void *)&parser_target);
-	lua_setfield(L, -2, "target");
-	/* push parser_all */
-	lua_pushlightuserdata(L, (void *)&parser_all);
-	lua_setfield(L, -2, "*a");
-	/* push parser_line */
-	lua_pushlightuserdata(L, (void *)&parser_line);
-	lua_setfield(L, -2, "*l");
-	/* insert parser table */
-	lua_setfield(L, -2, "parsers");
 
 	/* create metatable for the module */
 	lua_newtable(L);

@@ -16,38 +16,18 @@
 -- along with LEM.  If not, see <http://www.gnu.org/licenses/>.
 --
 
-local utils = require 'lem.utils'
-local io    = require 'lem.io.core'
+local utils  = require 'lem.utils'
+local io     = require 'lem.io.core'
 
 local type   = type
 local assert = assert
 local error  = error
 
 do
-	local parsers = io.parsers
-	local parser_available = parsers.available
-	parsers.available = nil
-	local parser_target = parsers.target
-	parsers.target = nil
+	local parsers = require 'lem.parsers'
 
-	function io.reader(readp)
-		return function(self, fmt, ...)
-			if fmt == nil then
-				return readp(self, parser_available)
-			end
-			if type(fmt) == 'number' then
-				return readp(self, parser_target, fmt)
-			end
-			local parser = parsers[fmt]
-			if parser == nil then
-				error('invalid format', 2)
-			end
-			return readp(self, parser, ...)
-		end
-	end
-
-	io.Stream.read = io.reader(io.Stream.readp)
-	io.File.read = io.reader(io.File.readp)
+	io.Stream.read = parsers.newreader(io.Stream.readp)
+	io.File.read   = parsers.newreader(io.File.readp)
 end
 
 do

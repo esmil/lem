@@ -25,6 +25,7 @@ headers      = @headers@
 
 llibs = \
 	lem/repl.lua \
+	lem/parsers.lua \
 	lem/io.lua \
 	lem/io/queue.lua \
 	lem/lfs.lua \
@@ -34,6 +35,7 @@ llibs = \
 
 clibs = \
 	lem/utils.so \
+	lem/parsers/core.so \
 	lem/io/core.so \
 	lem/lfs/core.so \
 	lem/http/core.so

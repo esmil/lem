@@ -16,7 +16,7 @@
  * along with LEM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lem-io.h>
+#include <lem-parsers.h>
 
 #if !(LUA_VERSION_NUM >= 502)
 #define lua_getuservalue lua_getfenv

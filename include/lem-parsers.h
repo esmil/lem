@@ -1,6 +1,6 @@
 /*
  * This file is part of LEM, a Lua Event Machine.
- * Copyright 2011-2012 Emil Renner Berthing
+ * Copyright 2011-2013 Emil Renner Berthing
  *
  * LEM is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -16,8 +16,8 @@
  * along with LEM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _LEM_IO_H
-#define _LEM_IO_H
+#ifndef _LEM_PARSERS_H
+#define _LEM_PARSERS_H
 
 #include <lem.h>
 

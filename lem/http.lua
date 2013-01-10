@@ -19,10 +19,14 @@
 local io   = require 'lem.io'
 local http = require 'lem.http.core'
 
-io.parsers['HTTPRequest'] = http.HTTPRequest
-http.HTTPRequest = nil
-io.parsers['HTTPResponse'] = http.HTTPResponse
-http.HTTPResponse = nil
+do
+	local parsers = require 'lem.parsers'
+
+	parsers.lookup['HTTPRequest'] = http.HTTPRequest
+	http.HTTPRequest = nil
+	parsers.lookup['HTTPResponse'] = http.HTTPResponse
+	http.HTTPResponse = nil
+end
 
 local tonumber = tonumber
 local concat = table.concat
