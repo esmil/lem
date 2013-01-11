@@ -31,8 +31,13 @@
 #include <netdb.h>
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
+#include <sys/un.h>
 #include <netinet/in.h>
+#ifndef UNIX_PATH_MAX
+#define UNIX_PATH_MAX 104
+#endif
 #else
+#include <linux/un.h>
 #include <sys/sendfile.h>
 #endif
 
@@ -66,6 +71,7 @@ io_strerror(lua_State *T, int err)
 #include "stream.c"
 #include "server.c"
 #include "tcp.c"
+#include "unix.c"
 
 static int
 module_index(lua_State *T)
@@ -360,6 +366,19 @@ luaopen_lem_io_core(lua_State *L)
 	lua_setfield(L, -2, "listen6");
 	/* insert the tcp table */
 	lua_setfield(L, -2, "tcp");
+
+	/* create unix table */
+	lua_createtable(L, 0, 0);
+	/* insert the connect function */
+	lua_getfield(L, -2, "Stream"); /* upvalue 1 = Stream */
+	lua_pushcclosure(L, unix_connect, 1);
+	lua_setfield(L, -2, "connect");
+	/* insert the listen function */
+	lua_getfield(L, -2, "Server"); /* upvalue 1 = Server */
+	lua_pushcclosure(L, unix_listen, 1);
+	lua_setfield(L, -2, "listen");
+	/* insert the tcp table */
+	lua_setfield(L, -2, "unix");
 
 	/* create metatable for the module */
 	lua_newtable(L);
