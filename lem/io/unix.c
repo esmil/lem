@@ -39,7 +39,7 @@ unix_connect_work(struct lem_async *a)
 	}
 
 	addr.sun_family = AF_UNIX;
-	strcpy(addr.sun_path, u->path);
+	memcpy(addr.sun_path, u->path, u->len+1);
 
 	if (connect(sock, (struct sockaddr *)&addr,
 				offsetof(struct sockaddr_un, sun_path) + u->len)) {
@@ -103,7 +103,7 @@ unix_connect(lua_State *T)
 	const char *path = luaL_checklstring(T, 1, &len);
 	struct unix_create *u;
 
-	if (len >= UNIX_PATH_MAX) /* important. strcpy is used later */
+	if (len >= UNIX_PATH_MAX)
 		return luaL_argerror(T, 1, "path too long");
 
 	u = lem_xmalloc(sizeof(struct unix_create));
@@ -131,7 +131,7 @@ unix_listen_work(struct lem_async *a)
 	}
 
 	addr.sun_family = AF_UNIX;
-	strcpy(addr.sun_path, u->path);
+	memcpy(addr.sun_path, u->path, u->len+1);
 
 	if (bind(sock, (struct sockaddr *)&addr,
 				offsetof(struct sockaddr_un, sun_path) + u->len)) {
@@ -217,7 +217,7 @@ unix_listen(lua_State *T)
 	int backlog = (int)luaL_optnumber(T, 2, MAXPENDING);
 	struct unix_create *u;
 
-	if (len >= UNIX_PATH_MAX) /* important. strcpy is used later */
+	if (len >= UNIX_PATH_MAX)
 		return luaL_argerror(T, 1, "path too long");
 
 	u = lem_xmalloc(sizeof(struct unix_create));
