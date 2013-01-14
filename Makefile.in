@@ -1,12 +1,12 @@
 CC           = @CC@
 CFLAGS      ?= @CFLAGS@
-CFLAGS      += @CPPFLAGS_PRIVATE@ @CPPFLAGS@
+CFLAGS      += @CPPFLAGS@
 SHARED       = @SHARED@
+LIBS         = @LIBS@
 
-PKG_CONFIG   = @PKG_CONFIG@
-STRIP        = @STRIP@
 INSTALL      = @INSTALL@
 SED          = @SED@
+STRIP        = @STRIP@
 
 prefix       = @prefix@
 exec_prefix  = @exec_prefix@
@@ -18,10 +18,8 @@ pkgconfigdir = @pkgconfigdir@
 lmoddir      = @lmoddir@
 cmoddir      = @cmoddir@
 
-objects      = @objects@
-LIBS         = @LIBS@
-
 headers      = @headers@
+objects      = @objects@
 
 llibs = \
 	lem/repl.lua \
@@ -83,7 +81,7 @@ lem.pc: lem.pc.in
 	  -e 's|@lmoddir[@]|$(lmoddir)|' \
 	  -e 's|@cmoddir[@]|$(cmoddir)|' \
 	  -e 's|@includedir[@]|$(includedir)|' \
-	  -e 's|@CPPFLAGS[@]|@CPPFLAGS@|' \
+	  -e 's|@Lua_CFLAGS[@]|@Lua_CFLAGS@|' \
 	  $< > $@
 
 %-strip: %

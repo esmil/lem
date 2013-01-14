@@ -623,13 +623,11 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
-luajit_LIBS
-luajit_CFLAGS
 EGREP
 GREP
 CPP
-lua_LIBS
-lua_CFLAGS
+Lua_LIBS
+Lua_CFLAGS
 PKG_CONFIG_LIBDIR
 PKG_CONFIG_PATH
 PKG_CONFIG
@@ -660,7 +658,6 @@ build
 pkgconfigdir
 cmoddir
 lmoddir
-CPPFLAGS_PRIVATE
 SHARED
 objects
 headers
@@ -721,11 +718,9 @@ CPPFLAGS
 PKG_CONFIG
 PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
-lua_CFLAGS
-lua_LIBS
-CPP
-luajit_CFLAGS
-luajit_LIBS'
+Lua_CFLAGS
+Lua_LIBS
+CPP'
 
 
 # Initialize some variables set by options.
@@ -1339,7 +1334,7 @@ if test -n "$ac_init_help"; then
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-lua              check, builtin, lua or luajit [default=check]
+  --with-lua              check, builtin or pkg-config name [default=check]
   --with-lmoddir          Lua module installation directory
   --with-cmoddir          Lua C module installation directory
   --with-pkgconfigdir     pkg-config installation directory
@@ -1358,12 +1353,9 @@ Some influential environment variables:
               directories to add to pkg-config's search path
   PKG_CONFIG_LIBDIR
               path overriding pkg-config's built-in search path
-  lua_CFLAGS  C compiler flags for lua, overriding pkg-config
-  lua_LIBS    linker flags for lua, overriding pkg-config
+  Lua_CFLAGS  C compiler flags for Lua, overriding pkg-config
+  Lua_LIBS    linker flags for Lua, overriding pkg-config
   CPP         C preprocessor
-  luajit_CFLAGS
-              C compiler flags for luajit, overriding pkg-config
-  luajit_LIBS linker flags for luajit, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -2165,24 +2157,12 @@ objects='bin/lem.o'
 
 SHARED='-shared'
 
-CPPFLAGS_PRIVATE='-Iinclude'
-
+CPPFLAGS='-Iinclude'
 
 
 # Check whether --with-lua was given.
 if test "${with_lua+set}" = set; then :
-  withval=$with_lua; case "$with_lua" in #(
-  check) :
-     ;; #(
-  builtin) :
-     ;; #(
-  lua) :
-     ;; #(
-  luajit) :
-     ;; #(
-  *) :
-    as_fn_error $? "invalid argument --with-lua=$with_lua" "$LINENO" 5 ;;
-esac
+  withval=$with_lua;
 else
   with_lua=check
 fi
@@ -3768,7 +3748,12 @@ if test "$ac_res" != no; then :
 fi
 
 
-# Checks for Lua.
+# Configure libev
+objects="bin/libev.o $objects"
+headers="ev-config.h ev.h $headers"
+CPPFLAGS="$CPPFLAGS -Ilibev"
+
+# Configure Lua
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -4167,14 +4152,16 @@ done
 
 
 case "x$with_lua" in #(
+  xbuiltin) :
+     ;; #(
   xcheck) :
 
 pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for lua" >&5
-$as_echo_n "checking for lua... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Lua" >&5
+$as_echo_n "checking for Lua... " >&6; }
 
-if test -n "$lua_CFLAGS"; then
-    pkg_cv_lua_CFLAGS="$lua_CFLAGS"
+if test -n "$Lua_CFLAGS"; then
+    pkg_cv_Lua_CFLAGS="$Lua_CFLAGS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
     { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua\""; } >&5
@@ -4182,7 +4169,7 @@ if test -n "$lua_CFLAGS"; then
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_lua_CFLAGS=`$PKG_CONFIG --cflags "lua" 2>/dev/null`
+  pkg_cv_Lua_CFLAGS=`$PKG_CONFIG --cflags "lua" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -4190,8 +4177,8 @@ fi
  else
     pkg_failed=untried
 fi
-if test -n "$lua_LIBS"; then
-    pkg_cv_lua_LIBS="$lua_LIBS"
+if test -n "$Lua_LIBS"; then
+    pkg_cv_Lua_LIBS="$Lua_LIBS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
     { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua\""; } >&5
@@ -4199,7 +4186,7 @@ if test -n "$lua_LIBS"; then
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_lua_LIBS=`$PKG_CONFIG --libs "lua" 2>/dev/null`
+  pkg_cv_Lua_LIBS=`$PKG_CONFIG --libs "lua" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -4220,12 +4207,130 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-	        lua_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "lua" 2>&1`
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "lua" 2>&1`
         else
-	        lua_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "lua" 2>&1`
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "lua" 2>&1`
         fi
 	# Put the nasty error message in config.log where it belongs
-	echo "$lua_PKG_ERRORS" >&5
+	echo "$Lua_PKG_ERRORS" >&5
+
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Lua" >&5
+$as_echo_n "checking for Lua... " >&6; }
+
+if test -n "$Lua_CFLAGS"; then
+    pkg_cv_Lua_CFLAGS="$Lua_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua5.2\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lua5.2") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_Lua_CFLAGS=`$PKG_CONFIG --cflags "lua5.2" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$Lua_LIBS"; then
+    pkg_cv_Lua_LIBS="$Lua_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua5.2\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lua5.2") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_Lua_LIBS=`$PKG_CONFIG --libs "lua5.2" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "lua5.2" 2>&1`
+        else
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "lua5.2" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$Lua_PKG_ERRORS" >&5
+
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Lua" >&5
+$as_echo_n "checking for Lua... " >&6; }
+
+if test -n "$Lua_CFLAGS"; then
+    pkg_cv_Lua_CFLAGS="$Lua_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua5.1\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lua5.1") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_Lua_CFLAGS=`$PKG_CONFIG --cflags "lua5.1" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$Lua_LIBS"; then
+    pkg_cv_Lua_LIBS="$Lua_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua5.1\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lua5.1") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_Lua_LIBS=`$PKG_CONFIG --libs "lua5.1" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "lua5.1" 2>&1`
+        else
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "lua5.1" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$Lua_PKG_ERRORS" >&5
 
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for lua_newstate in -llua" >&5
 $as_echo_n "checking for lua_newstate in -llua... " >&6; }
@@ -4267,7 +4372,8 @@ if test "x$ac_cv_lib_lua_lua_newstate" = xyes; then :
   ac_fn_c_check_header_mongrel "$LINENO" "lua.h" "ac_cv_header_lua_h" "$ac_includes_default"
 if test "x$ac_cv_header_lua_h" = xyes; then :
   with_lua=lua
-        LIBS="-llua $LIBS"
+        Lua_CFLAGS=''
+        Lua_LIBS='-llua'
 else
   with_lua=builtin
 fi
@@ -4320,7 +4426,8 @@ if test "x$ac_cv_lib_lua_lua_newstate" = xyes; then :
   ac_fn_c_check_header_mongrel "$LINENO" "lua.h" "ac_cv_header_lua_h" "$ac_includes_default"
 if test "x$ac_cv_header_lua_h" = xyes; then :
   with_lua=lua
-        LIBS="-llua $LIBS"
+        Lua_CFLAGS=''
+        Lua_LIBS='-llua'
 else
   with_lua=builtin
 fi
@@ -4331,298 +4438,695 @@ else
 fi
 
 else
-	lua_CFLAGS=$pkg_cv_lua_CFLAGS
-	lua_LIBS=$pkg_cv_lua_LIBS
+	Lua_CFLAGS=$pkg_cv_Lua_CFLAGS
+	Lua_LIBS=$pkg_cv_Lua_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	with_lua=lua5.1
+fi
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Lua" >&5
+$as_echo_n "checking for Lua... " >&6; }
+
+if test -n "$Lua_CFLAGS"; then
+    pkg_cv_Lua_CFLAGS="$Lua_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua5.1\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lua5.1") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_Lua_CFLAGS=`$PKG_CONFIG --cflags "lua5.1" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$Lua_LIBS"; then
+    pkg_cv_Lua_LIBS="$Lua_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua5.1\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lua5.1") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_Lua_LIBS=`$PKG_CONFIG --libs "lua5.1" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "lua5.1" 2>&1`
+        else
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "lua5.1" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$Lua_PKG_ERRORS" >&5
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for lua_newstate in -llua" >&5
+$as_echo_n "checking for lua_newstate in -llua... " >&6; }
+if ${ac_cv_lib_lua_lua_newstate+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-llua  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char lua_newstate ();
+int
+main ()
+{
+return lua_newstate ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_lua_lua_newstate=yes
+else
+  ac_cv_lib_lua_lua_newstate=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_lua_lua_newstate" >&5
+$as_echo "$ac_cv_lib_lua_lua_newstate" >&6; }
+if test "x$ac_cv_lib_lua_lua_newstate" = xyes; then :
+  ac_fn_c_check_header_mongrel "$LINENO" "lua.h" "ac_cv_header_lua_h" "$ac_includes_default"
+if test "x$ac_cv_header_lua_h" = xyes; then :
+  with_lua=lua
+        Lua_CFLAGS=''
+        Lua_LIBS='-llua'
+else
+  with_lua=builtin
+fi
+
+
+else
+  with_lua=builtin
+fi
+
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for lua_newstate in -llua" >&5
+$as_echo_n "checking for lua_newstate in -llua... " >&6; }
+if ${ac_cv_lib_lua_lua_newstate+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-llua  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char lua_newstate ();
+int
+main ()
+{
+return lua_newstate ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_lua_lua_newstate=yes
+else
+  ac_cv_lib_lua_lua_newstate=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_lua_lua_newstate" >&5
+$as_echo "$ac_cv_lib_lua_lua_newstate" >&6; }
+if test "x$ac_cv_lib_lua_lua_newstate" = xyes; then :
+  ac_fn_c_check_header_mongrel "$LINENO" "lua.h" "ac_cv_header_lua_h" "$ac_includes_default"
+if test "x$ac_cv_header_lua_h" = xyes; then :
+  with_lua=lua
+        Lua_CFLAGS=''
+        Lua_LIBS='-llua'
+else
+  with_lua=builtin
+fi
+
+
+else
+  with_lua=builtin
+fi
+
+else
+	Lua_CFLAGS=$pkg_cv_Lua_CFLAGS
+	Lua_LIBS=$pkg_cv_Lua_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	with_lua=lua5.1
+fi
+else
+	Lua_CFLAGS=$pkg_cv_Lua_CFLAGS
+	Lua_LIBS=$pkg_cv_Lua_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	with_lua=lua5.2
+fi
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Lua" >&5
+$as_echo_n "checking for Lua... " >&6; }
+
+if test -n "$Lua_CFLAGS"; then
+    pkg_cv_Lua_CFLAGS="$Lua_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua5.2\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lua5.2") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_Lua_CFLAGS=`$PKG_CONFIG --cflags "lua5.2" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$Lua_LIBS"; then
+    pkg_cv_Lua_LIBS="$Lua_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua5.2\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lua5.2") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_Lua_LIBS=`$PKG_CONFIG --libs "lua5.2" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "lua5.2" 2>&1`
+        else
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "lua5.2" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$Lua_PKG_ERRORS" >&5
+
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Lua" >&5
+$as_echo_n "checking for Lua... " >&6; }
+
+if test -n "$Lua_CFLAGS"; then
+    pkg_cv_Lua_CFLAGS="$Lua_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua5.1\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lua5.1") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_Lua_CFLAGS=`$PKG_CONFIG --cflags "lua5.1" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$Lua_LIBS"; then
+    pkg_cv_Lua_LIBS="$Lua_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua5.1\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lua5.1") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_Lua_LIBS=`$PKG_CONFIG --libs "lua5.1" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "lua5.1" 2>&1`
+        else
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "lua5.1" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$Lua_PKG_ERRORS" >&5
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for lua_newstate in -llua" >&5
+$as_echo_n "checking for lua_newstate in -llua... " >&6; }
+if ${ac_cv_lib_lua_lua_newstate+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-llua  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char lua_newstate ();
+int
+main ()
+{
+return lua_newstate ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_lua_lua_newstate=yes
+else
+  ac_cv_lib_lua_lua_newstate=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_lua_lua_newstate" >&5
+$as_echo "$ac_cv_lib_lua_lua_newstate" >&6; }
+if test "x$ac_cv_lib_lua_lua_newstate" = xyes; then :
+  ac_fn_c_check_header_mongrel "$LINENO" "lua.h" "ac_cv_header_lua_h" "$ac_includes_default"
+if test "x$ac_cv_header_lua_h" = xyes; then :
+  with_lua=lua
+        Lua_CFLAGS=''
+        Lua_LIBS='-llua'
+else
+  with_lua=builtin
+fi
+
+
+else
+  with_lua=builtin
+fi
+
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for lua_newstate in -llua" >&5
+$as_echo_n "checking for lua_newstate in -llua... " >&6; }
+if ${ac_cv_lib_lua_lua_newstate+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-llua  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char lua_newstate ();
+int
+main ()
+{
+return lua_newstate ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_lua_lua_newstate=yes
+else
+  ac_cv_lib_lua_lua_newstate=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_lua_lua_newstate" >&5
+$as_echo "$ac_cv_lib_lua_lua_newstate" >&6; }
+if test "x$ac_cv_lib_lua_lua_newstate" = xyes; then :
+  ac_fn_c_check_header_mongrel "$LINENO" "lua.h" "ac_cv_header_lua_h" "$ac_includes_default"
+if test "x$ac_cv_header_lua_h" = xyes; then :
+  with_lua=lua
+        Lua_CFLAGS=''
+        Lua_LIBS='-llua'
+else
+  with_lua=builtin
+fi
+
+
+else
+  with_lua=builtin
+fi
+
+else
+	Lua_CFLAGS=$pkg_cv_Lua_CFLAGS
+	Lua_LIBS=$pkg_cv_Lua_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	with_lua=lua5.1
+fi
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Lua" >&5
+$as_echo_n "checking for Lua... " >&6; }
+
+if test -n "$Lua_CFLAGS"; then
+    pkg_cv_Lua_CFLAGS="$Lua_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua5.1\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lua5.1") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_Lua_CFLAGS=`$PKG_CONFIG --cflags "lua5.1" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$Lua_LIBS"; then
+    pkg_cv_Lua_LIBS="$Lua_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua5.1\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lua5.1") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_Lua_LIBS=`$PKG_CONFIG --libs "lua5.1" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "lua5.1" 2>&1`
+        else
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "lua5.1" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$Lua_PKG_ERRORS" >&5
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for lua_newstate in -llua" >&5
+$as_echo_n "checking for lua_newstate in -llua... " >&6; }
+if ${ac_cv_lib_lua_lua_newstate+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-llua  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char lua_newstate ();
+int
+main ()
+{
+return lua_newstate ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_lua_lua_newstate=yes
+else
+  ac_cv_lib_lua_lua_newstate=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_lua_lua_newstate" >&5
+$as_echo "$ac_cv_lib_lua_lua_newstate" >&6; }
+if test "x$ac_cv_lib_lua_lua_newstate" = xyes; then :
+  ac_fn_c_check_header_mongrel "$LINENO" "lua.h" "ac_cv_header_lua_h" "$ac_includes_default"
+if test "x$ac_cv_header_lua_h" = xyes; then :
+  with_lua=lua
+        Lua_CFLAGS=''
+        Lua_LIBS='-llua'
+else
+  with_lua=builtin
+fi
+
+
+else
+  with_lua=builtin
+fi
+
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for lua_newstate in -llua" >&5
+$as_echo_n "checking for lua_newstate in -llua... " >&6; }
+if ${ac_cv_lib_lua_lua_newstate+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-llua  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char lua_newstate ();
+int
+main ()
+{
+return lua_newstate ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_lua_lua_newstate=yes
+else
+  ac_cv_lib_lua_lua_newstate=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_lua_lua_newstate" >&5
+$as_echo "$ac_cv_lib_lua_lua_newstate" >&6; }
+if test "x$ac_cv_lib_lua_lua_newstate" = xyes; then :
+  ac_fn_c_check_header_mongrel "$LINENO" "lua.h" "ac_cv_header_lua_h" "$ac_includes_default"
+if test "x$ac_cv_header_lua_h" = xyes; then :
+  with_lua=lua
+        Lua_CFLAGS=''
+        Lua_LIBS='-llua'
+else
+  with_lua=builtin
+fi
+
+
+else
+  with_lua=builtin
+fi
+
+else
+	Lua_CFLAGS=$pkg_cv_Lua_CFLAGS
+	Lua_LIBS=$pkg_cv_Lua_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	with_lua=lua5.1
+fi
+else
+	Lua_CFLAGS=$pkg_cv_Lua_CFLAGS
+	Lua_LIBS=$pkg_cv_Lua_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	with_lua=lua5.2
+fi
+else
+	Lua_CFLAGS=$pkg_cv_Lua_CFLAGS
+	Lua_LIBS=$pkg_cv_Lua_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 	with_lua=lua
-    CPPFLAGS="$CPPFLAGS $lua_CFLAGS"
-    LIBS="$lua_LIBS $LIBS"
-    if test "x$lmoddir" = 'x'; then :
-  lmoddir="`$PKG_CONFIG --variable=INSTALL_LMOD lua`"
-fi
-    if test "x$cmoddir" = 'x'; then :
-  cmoddir="`$PKG_CONFIG --variable=INSTALL_CMOD lua`"
-fi
-fi ;; #(
-  xlua) :
-
-pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for lua" >&5
-$as_echo_n "checking for lua... " >&6; }
-
-if test -n "$lua_CFLAGS"; then
-    pkg_cv_lua_CFLAGS="$lua_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "lua") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_lua_CFLAGS=`$PKG_CONFIG --cflags "lua" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$lua_LIBS"; then
-    pkg_cv_lua_LIBS="$lua_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "lua") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_lua_LIBS=`$PKG_CONFIG --libs "lua" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        lua_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "lua" 2>&1`
-        else
-	        lua_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "lua" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$lua_PKG_ERRORS" >&5
-
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for lua_newstate in -llua" >&5
-$as_echo_n "checking for lua_newstate in -llua... " >&6; }
-if ${ac_cv_lib_lua_lua_newstate+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-llua  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char lua_newstate ();
-int
-main ()
-{
-return lua_newstate ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_lua_lua_newstate=yes
-else
-  ac_cv_lib_lua_lua_newstate=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_lua_lua_newstate" >&5
-$as_echo "$ac_cv_lib_lua_lua_newstate" >&6; }
-if test "x$ac_cv_lib_lua_lua_newstate" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBLUA 1
-_ACEOF
-
-  LIBS="-llua $LIBS"
-
-else
-  as_fn_error $? "Lua library requested, but no Lua library found" "$LINENO" 5
-fi
-
-    ac_fn_c_check_header_mongrel "$LINENO" "lua.h" "ac_cv_header_lua_h" "$ac_includes_default"
-if test "x$ac_cv_header_lua_h" = xyes; then :
-
-else
-  as_fn_error $? "Lua library requested, but no lua.h header found" "$LINENO" 5
-fi
-
-
-elif test $pkg_failed = untried; then
-     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for lua_newstate in -llua" >&5
-$as_echo_n "checking for lua_newstate in -llua... " >&6; }
-if ${ac_cv_lib_lua_lua_newstate+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-llua  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char lua_newstate ();
-int
-main ()
-{
-return lua_newstate ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_lua_lua_newstate=yes
-else
-  ac_cv_lib_lua_lua_newstate=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_lua_lua_newstate" >&5
-$as_echo "$ac_cv_lib_lua_lua_newstate" >&6; }
-if test "x$ac_cv_lib_lua_lua_newstate" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBLUA 1
-_ACEOF
-
-  LIBS="-llua $LIBS"
-
-else
-  as_fn_error $? "Lua library requested, but no Lua library found" "$LINENO" 5
-fi
-
-    ac_fn_c_check_header_mongrel "$LINENO" "lua.h" "ac_cv_header_lua_h" "$ac_includes_default"
-if test "x$ac_cv_header_lua_h" = xyes; then :
-
-else
-  as_fn_error $? "Lua library requested, but no lua.h header found" "$LINENO" 5
-fi
-
-
-else
-	lua_CFLAGS=$pkg_cv_lua_CFLAGS
-	lua_LIBS=$pkg_cv_lua_LIBS
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-	CPPFLAGS="$CPPFLAGS $lua_CFLAGS"
-    LIBS="$lua_LIBS $LIBS"
-    if test "x$lmoddir" = 'x'; then :
-  lmoddir="`$PKG_CONFIG --variable=INSTALL_LMOD lua`"
-fi
-    if test "x$cmoddir" = 'x'; then :
-  cmoddir="`$PKG_CONFIG --variable=INSTALL_CMOD lua`"
-fi
-fi ;; #(
-  xluajit) :
-
-pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for luajit" >&5
-$as_echo_n "checking for luajit... " >&6; }
-
-if test -n "$luajit_CFLAGS"; then
-    pkg_cv_luajit_CFLAGS="$luajit_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"luajit\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "luajit") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_luajit_CFLAGS=`$PKG_CONFIG --cflags "luajit" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$luajit_LIBS"; then
-    pkg_cv_luajit_LIBS="$luajit_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"luajit\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "luajit") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_luajit_LIBS=`$PKG_CONFIG --libs "luajit" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        luajit_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "luajit" 2>&1`
-        else
-	        luajit_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "luajit" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$luajit_PKG_ERRORS" >&5
-
-	as_fn_error $? "LuaJIT library requested, but no pkg-config file found" "$LINENO" 5
-elif test $pkg_failed = untried; then
-     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-	as_fn_error $? "LuaJIT library requested, but no pkg-config file found" "$LINENO" 5
-else
-	luajit_CFLAGS=$pkg_cv_luajit_CFLAGS
-	luajit_LIBS=$pkg_cv_luajit_LIBS
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-	CPPFLAGS="$CPPFLAGS $luajit_CFLAGS"
-    LIBS="$luajit_LIBS $LIBS"
-    if test "x$lmoddir" = 'x'; then :
-  lmoddir="`$PKG_CONFIG --variable=INSTALL_LMOD luajit`"
-fi
-    if test "x$cmoddir" = 'x'; then :
-  cmoddir="`$PKG_CONFIG --variable=INSTALL_CMOD luajit`"
-fi
 fi ;; #(
   *) :
-     ;;
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Lua" >&5
+$as_echo_n "checking for Lua... " >&6; }
+
+if test -n "$Lua_CFLAGS"; then
+    pkg_cv_Lua_CFLAGS="$Lua_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\"\$with_lua\"\""; } >&5
+  ($PKG_CONFIG --exists --print-errors ""$with_lua"") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_Lua_CFLAGS=`$PKG_CONFIG --cflags ""$with_lua"" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$Lua_LIBS"; then
+    pkg_cv_Lua_LIBS="$Lua_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\"\$with_lua\"\""; } >&5
+  ($PKG_CONFIG --exists --print-errors ""$with_lua"") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_Lua_LIBS=`$PKG_CONFIG --libs ""$with_lua"" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs ""$with_lua"" 2>&1`
+        else
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs ""$with_lua"" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$Lua_PKG_ERRORS" >&5
+
+	as_fn_error $? "\"pkg-config package '$with_lua' not found\"" "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	as_fn_error $? "\"pkg-config package '$with_lua' not found\"" "$LINENO" 5
+else
+	Lua_CFLAGS=$pkg_cv_Lua_CFLAGS
+	Lua_LIBS=$pkg_cv_Lua_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+fi ;;
 esac
 
 if test "x$with_lua" = 'xbuiltin'; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for sin in -lm" >&5
-$as_echo_n "checking for sin in -lm... " >&6; }
-if ${ac_cv_lib_m_sin+:} false; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing sin" >&5
+$as_echo_n "checking for library containing sin... " >&6; }
+if ${ac_cv_search_sin+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lm  $LIBS"
+  ac_func_search_save_LIBS=$LIBS
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -4641,23 +5145,35 @@ return sin ();
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_m_sin=yes
-else
-  ac_cv_lib_m_sin=no
+for ac_lib in '' m; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_sin=$ac_res
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
+    conftest$ac_exeext
+  if ${ac_cv_search_sin+:} false; then :
+  break
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_m_sin" >&5
-$as_echo "$ac_cv_lib_m_sin" >&6; }
-if test "x$ac_cv_lib_m_sin" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBM 1
-_ACEOF
+done
+if ${ac_cv_search_sin+:} false; then :
 
-  LIBS="-lm $LIBS"
+else
+  ac_cv_search_sin=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_sin" >&5
+$as_echo "$ac_cv_search_sin" >&6; }
+ac_res=$ac_cv_search_sin
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
 fi
 
@@ -4719,13 +5235,31 @@ fi
 
   objects="bin/lua.o $objects"
   headers="luaconf.h lua.h lauxlib.h $headers"
-  CPPFLAGS_PRIVATE="$CPPFLAGS_PRIVATE -Ilua"
+  CPPFLAGS="$CPPFLAGS -Ilua"
+  Lua_CFLAGS=''
+  Lua_LIBS=''
   if test "x$lmoddir" = 'x'; then :
   lmoddir="\${datarootdir}/lua/$builtin_lua_version"
 fi
   if test "x$cmoddir" = 'x'; then :
   cmoddir="\${libdir}/lua/$builtin_lua_version"
 fi
+fi
+
+CPPFLAGS="$CPPFLAGS $Lua_CFLAGS"
+LIBS="$Lua_LIBS $LIBS"
+if test "x$lmoddir" = 'x'; then :
+  lmoddir="`$PKG_CONFIG --variable=INSTALL_LMOD $with_lua`"
+fi
+if test "x$cmoddir" = 'x'; then :
+  cmoddir="`$PKG_CONFIG --variable=INSTALL_CMOD $with_lua`"
+fi
+
+if test "x$lmoddir" = 'x'; then :
+  as_fn_error $? "unable to deduce Lua module directory, please use --with-lmoddir=path" "$LINENO" 5
+fi
+if test "x$cmoddir" = 'x'; then :
+  as_fn_error $? "unable to deduce Lua C module directory, please use --with-cmoddir=path" "$LINENO" 5
 fi
 
 # Checks for header files.
@@ -4755,19 +5289,6 @@ fi
 
 done
 
-
-#  [AC_RUN_IFELSE([AC_LANG_PROGRAM([
-##include <stdio.h>
-##include <lua.h>
-#], [
-#FILE *f = fopen("conftest.out", "w");
-#fputs(LUA_VERSION, f);
-#])],
-#    [echo "conftest returned: `cat conftest.out`"],[])])
-
-objects="bin/libev.o $objects"
-headers="ev-config.h ev.h $headers"
-CPPFLAGS_PRIVATE="$CPPFLAGS_PRIVATE -Ilibev"
 
 if test "x$ac_cv_header_sys_eventfd_h" = 'xyes'; then :
   ac_fn_c_check_func "$LINENO" "eventfd" "ac_cv_func_eventfd"
@@ -4861,13 +5382,6 @@ else
 fi
 fi
 fi
-fi
-
-if test "x$lmoddir" = 'x'; then :
-  as_fn_error $? "unable to deduce Lua module directory, please use --with-lmoddir=path" "$LINENO" 5
-fi
-if test "x$cmoddir" = 'x'; then :
-  as_fn_error $? "unable to deduce Lua C module directory, please use --with-cmoddir=path" "$LINENO" 5
 fi
 
 ac_config_files="$ac_config_files Makefile"

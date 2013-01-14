@@ -8,13 +8,12 @@ AC_CONFIG_HEADERS([libev/ev-config.h:ev-config.h.in])
 AC_SUBST([headers], ['lem.h lem-parsers.h'])
 AC_SUBST([objects], ['bin/lem.o'])
 AC_SUBST([SHARED], ['-shared'])
-AC_SUBST([CPPFLAGS_PRIVATE], ['-Iinclude'])
+CPPFLAGS='-Iinclude'
 
 AC_ARG_WITH([lua],
   [AS_HELP_STRING([--with-lua],
-    [check, builtin, lua or luajit @<:@default=check@:>@])],
-  [AS_CASE(["$with_lua"], [check],,[builtin],,[lua],,[luajit],,
-    [AC_MSG_ERROR([invalid argument --with-lua=$with_lua])])],
+    [check, builtin or pkg-config name @<:@default=check@:>@])],
+  [],
   [with_lua=check])
 
 AC_SUBST([lmoddir])
@@ -49,66 +48,53 @@ AS_CASE(["x$target_os"],
 # Check for pthread library
 AC_SEARCH_LIBS([pthread_create], [pthread])
 
-# Checks for Lua.
+# Configure libev
+objects="bin/libev.o $objects"
+headers="ev-config.h ev.h $headers"
+CPPFLAGS="$CPPFLAGS -Ilibev"
+
+# Configure Lua
 AS_CASE(["x$with_lua"],
+  [xbuiltin],
+  [],
   [xcheck],
-  [PKG_CHECK_MODULES([lua], [lua],
-    [with_lua=lua]
-    [CPPFLAGS="$CPPFLAGS $lua_CFLAGS"]
-    [LIBS="$lua_LIBS $LIBS"]
-    [AS_IF([test "x$lmoddir" = 'x'], [lmoddir="`$PKG_CONFIG --variable=INSTALL_LMOD lua`"])]
-    [AS_IF([test "x$cmoddir" = 'x'], [cmoddir="`$PKG_CONFIG --variable=INSTALL_CMOD lua`"])],
+  [PKG_CHECK_MODULES([Lua], [lua],    [with_lua=lua],
+  [PKG_CHECK_MODULES([Lua], [lua5.2], [with_lua=lua5.2],
+  [PKG_CHECK_MODULES([Lua], [lua5.1], [with_lua=lua5.1],
     [AC_CHECK_LIB([lua], [lua_newstate],
       [AC_CHECK_HEADER([lua.h],
 	[with_lua=lua]
-        [LIBS="-llua $LIBS"],
+        [Lua_CFLAGS='']
+        [Lua_LIBS='-llua'],
         [with_lua=builtin])],
-      [with_lua=builtin])])],
-  [xlua],
-  [PKG_CHECK_MODULES([lua], [lua],
-    [CPPFLAGS="$CPPFLAGS $lua_CFLAGS"]
-    [LIBS="$lua_LIBS $LIBS"]
-    [AS_IF([test "x$lmoddir" = 'x'], [lmoddir="`$PKG_CONFIG --variable=INSTALL_LMOD lua`"])]
-    [AS_IF([test "x$cmoddir" = 'x'], [cmoddir="`$PKG_CONFIG --variable=INSTALL_CMOD lua`"])],
-    [AC_CHECK_LIB([lua], [lua_newstate],
-      [],
-      [AC_MSG_ERROR([Lua library requested, but no Lua library found])])]
-    [AC_CHECK_HEADER([lua.h],
-      [],
-      [AC_MSG_ERROR([Lua library requested, but no lua.h header found])])])],
-  [xluajit],
-  [PKG_CHECK_MODULES([luajit], [luajit],
-    [CPPFLAGS="$CPPFLAGS $luajit_CFLAGS"]
-    [LIBS="$luajit_LIBS $LIBS"]
-    [AS_IF([test "x$lmoddir" = 'x'], [lmoddir="`$PKG_CONFIG --variable=INSTALL_LMOD luajit`"])]
-    [AS_IF([test "x$cmoddir" = 'x'], [cmoddir="`$PKG_CONFIG --variable=INSTALL_CMOD luajit`"])],
-    [AC_MSG_ERROR([LuaJIT library requested, but no pkg-config file found])])])
+      [with_lua=builtin])])])])],
+  [PKG_CHECK_MODULES([Lua], ["$with_lua"], [],
+    [AC_MSG_ERROR(["pkg-config package '$with_lua' not found"])])])
 
 AS_IF([test "x$with_lua" = 'xbuiltin'],
-  [AC_CHECK_LIB([m], [sin])]
+  [AC_SEARCH_LIBS([sin], [m])]
   [AC_SEARCH_LIBS([dlopen], [dl])]
   [objects="bin/lua.o $objects"]
   [headers="luaconf.h lua.h lauxlib.h $headers"]
-  [CPPFLAGS_PRIVATE="$CPPFLAGS_PRIVATE -Ilua"]
+  [CPPFLAGS="$CPPFLAGS -Ilua"]
+  [Lua_CFLAGS='']
+  [Lua_LIBS='']
   [AS_IF([test "x$lmoddir" = 'x'], [lmoddir="\${datarootdir}/lua/$builtin_lua_version"])]
   [AS_IF([test "x$cmoddir" = 'x'], [cmoddir="\${libdir}/lua/$builtin_lua_version"])])
+
+CPPFLAGS="$CPPFLAGS $Lua_CFLAGS"
+LIBS="$Lua_LIBS $LIBS"
+AS_IF([test "x$lmoddir" = 'x'], [lmoddir="`$PKG_CONFIG --variable=INSTALL_LMOD $with_lua`"])
+AS_IF([test "x$cmoddir" = 'x'], [cmoddir="`$PKG_CONFIG --variable=INSTALL_CMOD $with_lua`"])
+
+AS_IF([test "x$lmoddir" = 'x'],
+  [AC_MSG_ERROR([unable to deduce Lua module directory, please use --with-lmoddir=path])])
+AS_IF([test "x$cmoddir" = 'x'],
+  [AC_MSG_ERROR([unable to deduce Lua C module directory, please use --with-cmoddir=path])])
 
 # Checks for header files.
 AC_CHECK_HEADERS([stddef.h stdlib.h string.h unistd.h sys/time.h time.h pthread.h])
 AC_CHECK_HEADERS([sys/eventfd.h sys/epoll.h sys/event.h])
-
-#  [AC_RUN_IFELSE([AC_LANG_PROGRAM([
-##include <stdio.h>
-##include <lua.h>
-#], [
-#FILE *f = fopen("conftest.out", "w");
-#fputs(LUA_VERSION, f);
-#])],
-#    [echo "conftest returned: `cat conftest.out`"],[])])
-
-objects="bin/libev.o $objects"
-headers="ev-config.h ev.h $headers"
-CPPFLAGS_PRIVATE="$CPPFLAGS_PRIVATE -Ilibev"
 
 AS_IF([test "x$ac_cv_header_sys_eventfd_h" = 'xyes'],
   [AC_CHECK_FUNC([eventfd],
@@ -145,11 +131,6 @@ AS_IF([test "x$ac_cv_func_epoll_ctl" = 'xyes'], [
 ], [
   AC_MSG_ERROR([neither poll or select found])
 ])])])])
-
-AS_IF([test "x$lmoddir" = 'x'],
-  [AC_MSG_ERROR([unable to deduce Lua module directory, please use --with-lmoddir=path])])
-AS_IF([test "x$cmoddir" = 'x'],
-  [AC_MSG_ERROR([unable to deduce Lua C module directory, please use --with-cmoddir=path])])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
