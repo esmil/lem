@@ -159,7 +159,12 @@ do
 	end
 
 	function M.Hathaway(host, port)
-		local server, err = httpserv.new(host, port, handler)
+		local server, err
+		if port then
+			server, err = httpserv.new(host, port, handler)
+		else
+			server, err = httpserv.new(host, handler)
+		end
 		if not server then M.debug('new', err) return nil, err end
 
 		server.debug = M.debug
