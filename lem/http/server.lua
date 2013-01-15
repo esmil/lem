@@ -248,8 +248,7 @@ do
 			i = i + 1
 			robe[i] = '\r\n'
 
-			local ok, err = client:cork()
-			if not ok then self.debug('cork', err) break end
+			client:cork()
 
 			local ok, err = client:write(concat(robe))
 			if not ok then self.debug('write', err) break end
@@ -267,8 +266,7 @@ do
 				if not ok then self.debug('write', err) break end
 			end
 
-			local ok, err = client:uncork()
-			if not ok then self.debug('uncork', err) break end
+			client:uncork()
 
 		until version == '1.0'
 		   or headers['Connection'] == 'close'
