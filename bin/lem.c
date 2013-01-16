@@ -99,7 +99,7 @@ ignore_sigpipe(void)
 	struct sigaction act;
 
 	if (sigaction(SIGPIPE, NULL, &act)) {
-		lem_log_error("error getting signal action: %s",
+		lem_log_error("lem: error getting signal action: %s",
 		              strerror(errno));
 		return -1;
 	}
@@ -107,7 +107,7 @@ ignore_sigpipe(void)
 	act.sa_handler = SIG_IGN;
 
 	if (sigaction(SIGPIPE, &act, NULL)) {
-		lem_log_error("error setting signal action: %s",
+		lem_log_error("lem: error setting signal action: %s",
 		              strerror(errno));
 		return -1;
 	}
@@ -193,6 +193,15 @@ lem_queue(lua_State *T, int nargs)
 }
 
 static void
+thread_error(lua_State *T)
+{
+	const char *msg = lua_tostring(T, -1);
+
+	if (msg)
+		luaL_traceback(L, T, msg, 0);
+}
+
+static void
 runqueue_pop(EV_P_ struct ev_idle *w, int revents)
 {
 	struct lem_runqueue_slot *slot;
@@ -247,8 +256,7 @@ runqueue_pop(EV_P_ struct ev_idle *w, int revents)
 #endif
 	case LUA_ERRRUN: /* runtime error */
 		lem_debug("thread errored");
-		/* move error message to L */
-		lua_xmove(T, L, 1);
+		thread_error(T);
 		break;
 
 	case LUA_ERRMEM: /* out of memory */
@@ -284,7 +292,7 @@ queue_file(int argc, char *argv[], int fidx)
 		oom();
 
 	default:
-		lem_log_error("%s", lua_tostring(T, 1));
+		lem_log_error("lem: %s", lua_tostring(T, 1));
 		return -1;
 	}
 
@@ -308,7 +316,7 @@ main(int argc, char *argv[])
 #else
 	if (!ev_default_loop(LEM_LOOPFLAGS)) {
 #endif
-		lem_log_error("Error initializing event loop");
+		lem_log_error("lem: error initializing event loop");
 		return EXIT_FAILURE;
 	}
 
@@ -318,7 +326,7 @@ main(int argc, char *argv[])
 	/* create main Lua state */
 	L = luaL_newstate();
 	if (L == NULL) {
-		lem_log_error("Error initializing Lua state");
+		lem_log_error("lem: error initializing Lua state");
 		goto error;
 	}
 	luaL_openlibs(L);
@@ -336,7 +344,7 @@ main(int argc, char *argv[])
 
 	/* initialize threadpool */
 	if (pool_init()) {
-		lem_log_error("Error initializing threadpool");
+		lem_log_error("lem: error initializing threadpool");
 		goto error;
 	}
 
@@ -350,7 +358,7 @@ main(int argc, char *argv[])
 
 	/* if there is an error message left on L print it */
 	if (lua_type(L, -1) == LUA_TSTRING)
-		lem_log_error("%s", lua_tostring(L, -1));
+		lem_log_error("lem: %s", lua_tostring(L, -1));
 
 	/* shutdown Lua */
 	lua_close(L);
