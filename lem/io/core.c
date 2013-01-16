@@ -16,6 +16,7 @@
  * License along with LEM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
@@ -32,6 +33,7 @@
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 #include <sys/un.h>
+#include <sys/ucred.h>
 #include <netinet/in.h>
 #ifndef UNIX_PATH_MAX
 #define UNIX_PATH_MAX 104
@@ -319,6 +321,9 @@ luaopen_lem_io_core(lua_State *L)
 	/* mt.uncork = <stream_uncork> */
 	lua_pushcfunction(L, stream_uncork);
 	lua_setfield(L, -2, "uncork");
+	/* mt.getpeer = <stream_getpeer> */
+	lua_pushcfunction(L, stream_getpeer);
+	lua_setfield(L, -2, "getpeer");
 	/* mt.sendfile = <stream_sendfile> */
 	lua_pushcfunction(L, stream_sendfile);
 	lua_setfield(L, -2, "sendfile");
@@ -402,7 +407,7 @@ luaopen_lem_io_core(lua_State *L)
 	lua_getfield(L, -2, "Server"); /* upvalue 1 = Server */
 	lua_pushcclosure(L, unix_listen, 1);
 	lua_setfield(L, -2, "listen");
-	/* insert the tcp table */
+	/* insert the unix table */
 	lua_setfield(L, -2, "unix");
 
 	return 1;

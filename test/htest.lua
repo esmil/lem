@@ -21,10 +21,12 @@ package.path = '?.lua'
 package.cpath = '?.so'
 
 local utils    = require 'lem.utils'
+local io       = require 'lem.io'
 local hathaway = require 'lem.hathaway'
 hathaway.import()
 
 GET('/', function(req, res)
+	print(req.client:getpeer())
 	res.status = 302
 	res.headers['Location'] = '/dump'
 end)
@@ -145,7 +147,12 @@ GETM('^/hello/([^/]+)$', function(req, res, name)
 end)
 
 hathaway.debug = print
-Hathaway('*', arg[1] or 8080)
+if arg[1] == 'socket' then
+	local sock = assert(io.unix.listen('socket', 666))
+	Hathaway(sock)
+else
+	Hathaway('*', arg[1] or '8080')
+end
 utils.exit(0) -- otherwise open connections will keep us running
 
 -- vim: syntax=lua ts=2 sw=2 noet:

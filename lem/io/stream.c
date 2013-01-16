@@ -325,6 +325,87 @@ stream_uncork(lua_State *T)
 	return stream_setcork(T, 0);
 }
 
+static int
+stream_getpeer(lua_State *T)
+{
+	struct stream *s;
+	union {
+		struct sockaddr all;
+		struct sockaddr_in in;
+		struct sockaddr_in6 in6;
+	} addr;
+	socklen_t len;
+
+	luaL_checktype(T, 1, LUA_TUSERDATA);
+	s = lua_touserdata(T, 1);
+	if (!s->open)
+		return io_closed(T);
+
+	len = sizeof(addr);
+	if (getpeername(s->r.fd, &addr.all, &len))
+		return io_strerror(T, errno);
+
+	switch (addr.all.sa_family) {
+	case AF_UNIX: {
+#if defined(__FreeBSD__) || defined(__APPLE__)
+			struct xucred cred;
+
+			len = sizeof(struct xucred);
+			if (getsockopt(s->r.fd, 0, LOCAL_PEERCRED, &cred, &len))
+				return io_strerror(T, errno);
+
+			if (len != sizeof(struct xucred) ||
+					cred.cr_version != XUCRED_VERSION) {
+				lua_pushnil(T);
+				lua_pushliteral(T, "version mismatch");
+				return 2;
+			}
+
+			lua_pushliteral(T, "*unix");
+			lua_pushnumber(T, cred.cr_uid);
+			lua_pushnumber(T, cred.cr_gid);
+#else
+			struct ucred cred;
+
+			len = sizeof(struct ucred);
+			if (getsockopt(s->r.fd, SOL_SOCKET, SO_PEERCRED, &cred, &len))
+				return io_strerror(T, errno);
+
+			lua_pushliteral(T, "*unix");
+			lua_pushnumber(T, cred.uid);
+			lua_pushnumber(T, cred.gid);
+#endif
+			return 3;
+		}
+
+	case AF_INET: {
+			char buf[INET_ADDRSTRLEN];
+
+			if (inet_ntop(addr.in.sin_family, &addr.in.sin_addr,
+						buf, sizeof(buf)) == NULL)
+				return io_strerror(T, errno);
+
+			lua_pushstring(T, buf);
+			lua_pushnumber(T, ntohs(addr.in.sin_port));
+			return 2;
+		}
+
+	case AF_INET6: {
+			char buf[INET6_ADDRSTRLEN];
+
+			if (inet_ntop(addr.in6.sin6_family, &addr.in6.sin6_addr,
+						buf, sizeof(buf)) == NULL)
+				return io_strerror(T, errno);
+
+			lua_pushstring(T, buf);
+			lua_pushnumber(T, ntohs(addr.in6.sin6_port));
+			return 2;
+		}
+	}
+
+	return io_strerror(T, EINVAL);
+}
+
 struct sfhandle {
 	struct lem_async a;
 	struct stream *s;
