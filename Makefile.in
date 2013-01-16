@@ -116,9 +116,8 @@ $(DESTDIR)$(lmoddir)/% $(DESTDIR)$(cmoddir)/% $(DESTDIR)$(pkgconfigdir)/%: %
 	$Q$(INSTALL) -m 644 $< $@
 
 install: \
-	$(DESTDIR)$(pkgconfigdir)/lem.pc \
 	$(DESTDIR)$(bindir)/lem \
-	$(DESTDIR)$(bindir)/lem-repl \
+	$(DESTDIR)$(pkgconfigdir)/lem.pc \
 	$(headers:%=$(DESTDIR)$(includedir)/lem/%) \
 	$(llibs:%=$(DESTDIR)$(lmoddir)/%) \
 	$(clibs:%=$(DESTDIR)$(cmoddir)/%)

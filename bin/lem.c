@@ -1,6 +1,6 @@
 /*
  * This file is part of LEM, a Lua Event Machine.
- * Copyright 2011-2012 Emil Renner Berthing
+ * Copyright 2011-2013 Emil Renner Berthing
  *
  * LEM is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as
@@ -268,9 +268,15 @@ static int
 queue_file(int argc, char *argv[], int fidx)
 {
 	lua_State *T = lem_newthread();
+	const char *filename;
 	int i;
 
-	switch (luaL_loadfile(T, argv[fidx])) {
+	if (fidx < argc)
+		filename = argv[fidx];
+	else
+		filename = LUA_LDIR "lem/repl.lua";
+
+	switch (luaL_loadfile(T, filename)) {
 	case LUA_OK: /* success */
 		break;
 
@@ -296,11 +302,6 @@ queue_file(int argc, char *argv[], int fidx)
 int
 main(int argc, char *argv[])
 {
-	if (argc < 2) {
-		lem_log_error("I need a file..");
-		return EXIT_FAILURE;
-	}
-
 #if EV_MULTIPLICITY
 	lem_loop = ev_default_loop(LEM_LOOPFLAGS);
 	if (lem_loop == NULL) {
