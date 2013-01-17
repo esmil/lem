@@ -5238,6 +5238,7 @@ fi
   CPPFLAGS="$CPPFLAGS -Ilua"
   Lua_CFLAGS=''
   Lua_LIBS=''
+  ac_cv_func_luaL_traceback=yes
   if test "x$lmoddir" = 'x'; then :
   lmoddir="\${datarootdir}/lua/$builtin_lua_version"
 fi

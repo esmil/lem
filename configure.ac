@@ -79,6 +79,7 @@ AS_IF([test "x$with_lua" = 'xbuiltin'],
   [CPPFLAGS="$CPPFLAGS -Ilua"]
   [Lua_CFLAGS='']
   [Lua_LIBS='']
+  [ac_cv_func_luaL_traceback=yes]
   [AS_IF([test "x$lmoddir" = 'x'], [lmoddir="\${datarootdir}/lua/$builtin_lua_version"])]
   [AS_IF([test "x$cmoddir" = 'x'], [cmoddir="\${libdir}/lua/$builtin_lua_version"])])
 
