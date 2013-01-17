@@ -5262,6 +5262,12 @@ if test "x$cmoddir" = 'x'; then :
   as_fn_error $? "unable to deduce Lua C module directory, please use --with-cmoddir=path" "$LINENO" 5
 fi
 
+ac_fn_c_check_func "$LINENO" "luaL_traceback" "ac_cv_func_luaL_traceback"
+if test "x$ac_cv_func_luaL_traceback" = xyes; then :
+  CPPFLAGS="$CPPFLAGS -DHAVE_TRACEBACK"
+fi
+
+
 # Checks for header files.
 for ac_header in stddef.h stdlib.h string.h unistd.h sys/time.h time.h pthread.h
 do :

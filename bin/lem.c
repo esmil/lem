@@ -195,10 +195,30 @@ lem_queue(lua_State *T, int nargs)
 static void
 thread_error(lua_State *T)
 {
+#ifdef HAVE_TRACEBACK
 	const char *msg = lua_tostring(T, -1);
 
 	if (msg)
 		luaL_traceback(L, T, msg, 0);
+#else /* adapted from Lua 5.1 source */
+	if (!lua_isstring(T, -1)) /* 'message' not a string? */
+		return;
+	lua_getfield(T, LUA_GLOBALSINDEX, "debug");
+	if (!lua_istable(T, -1)) {
+		lua_pop(T, 1);
+		goto merror;
+	}
+	lua_getfield(T, -1, "traceback");
+	if (!lua_isfunction(T, -1)) {
+		lua_pop(T, 2);
+		goto merror;
+	}
+	lua_pushvalue(T, -3);  /* pass error message */
+	lua_pushinteger(T, 1); /* skip traceback */
+	lua_call(T, 2, 1);     /* call debug.traceback */
+merror:
+	lua_xmove(T, L, 1);    /* move error message to L */
+#endif
 }
 
 static void

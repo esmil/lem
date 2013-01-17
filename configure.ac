@@ -92,6 +92,8 @@ AS_IF([test "x$lmoddir" = 'x'],
 AS_IF([test "x$cmoddir" = 'x'],
   [AC_MSG_ERROR([unable to deduce Lua C module directory, please use --with-cmoddir=path])])
 
+AC_CHECK_FUNC([luaL_traceback], [CPPFLAGS="$CPPFLAGS -DHAVE_TRACEBACK"])
+
 # Checks for header files.
 AC_CHECK_HEADERS([stddef.h stdlib.h string.h unistd.h sys/time.h time.h pthread.h])
 AC_CHECK_HEADERS([sys/eventfd.h sys/epoll.h sys/event.h])
