@@ -73,38 +73,6 @@ io_strerror(lua_State *T, int err)
 #include "tcp.c"
 #include "unix.c"
 
-static int
-module_index(lua_State *T)
-{
-	const char *key = lua_tostring(T, 2);
-	int fd;
-
-	if (strcmp(key, "stdin") == 0)
-		fd = 0;
-	else if (strcmp(key, "stdout") == 0)
-		fd = 1;
-	else if (strcmp(key, "stderr") == 0)
-		fd = 2;
-	else
-		return 0;
-
-	/* make the socket non-blocking */
-	if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0) {
-		lua_pushnil(T);
-		lua_pushfstring(T, "error making filedescriptor non-blocking: %s",
-		                strerror(errno));
-		return 2;
-	}
-
-	stream_new(T, fd, lua_upvalueindex(1));
-
-	/* save this object so we don't initialize it again */
-	lua_pushvalue(T, 2);
-	lua_pushvalue(T, -2);
-	lua_rawset(T, 1);
-	return 1;
-}
-
 struct open {
 	struct lem_async a;
 	const char *path;
@@ -239,6 +207,17 @@ io_open(lua_State *T)
 	return lua_yield(T, 3);
 }
 
+static void
+push_stdstream(lua_State *L, int fd)
+{
+	/* make the socket non-blocking */
+	if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
+		luaL_error(L, "error making fd %d non-blocking: %s",
+				fd, strerror(errno));
+
+	stream_new(L, fd, -2);
+}
+
 int
 luaopen_lem_io_core(lua_State *L)
 {
@@ -306,6 +285,15 @@ luaopen_lem_io_core(lua_State *L)
 	/* mt.sendfile = <stream_sendfile> */
 	lua_pushcfunction(L, stream_sendfile);
 	lua_setfield(L, -2, "sendfile");
+	/* insert io.stdin stream */
+	push_stdstream(L, STDIN_FILENO);
+	lua_setfield(L, -3, "stdin");
+	/* insert io.stdout stream */
+	push_stdstream(L, STDOUT_FILENO);
+	lua_setfield(L, -3, "stdout");
+	/* insert io.stderr stream */
+	push_stdstream(L, STDERR_FILENO);
+	lua_setfield(L, -3, "stderr");
 	/* insert table */
 	lua_setfield(L, -2, "Stream");
 
@@ -379,16 +367,6 @@ luaopen_lem_io_core(lua_State *L)
 	lua_setfield(L, -2, "listen");
 	/* insert the tcp table */
 	lua_setfield(L, -2, "unix");
-
-	/* create metatable for the module */
-	lua_newtable(L);
-	/* insert the index function */
-	lua_getfield(L, -2, "Stream"); /* upvalue 1 = Stream */
-	lua_pushcclosure(L, module_index, 1);
-	lua_setfield(L, -2, "__index");
-
-	/* set the metatable */
-	lua_setmetatable(L, -2);
 
 	return 1;
 }
