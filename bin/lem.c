@@ -302,7 +302,7 @@ queue_file(int argc, char *argv[], int fidx)
 	if (fidx < argc)
 		filename = argv[fidx];
 	else
-		filename = LUA_LDIR "lem/repl.lua";
+		filename = LEM_LDIR "lem/repl.lua";
 
 	switch (luaL_loadfile(T, filename)) {
 	case LUA_OK: /* success */

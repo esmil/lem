@@ -55,6 +55,7 @@ debug: bin/lem lem.pc $(clibs)
 
 bin/libev.o: CFLAGS += -w
 bin/lua.o: lua/luaconf.h
+bin/lem.o: CFLAGS += -D'LEM_LDIR="$(lmoddir)/"'
 
 %.o: %.c
 	$E '  CC    $@'
