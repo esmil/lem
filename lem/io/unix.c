@@ -140,15 +140,21 @@ unix_listen_work(struct lem_async *a)
 		goto error;
 	}
 
-	if (listen(sock, u->err)) {
+	if (u->sock >= 0 && chmod(u->path, u->sock)) {
 		u->sock = -3;
+		u->err = errno;
+		goto error;
+	}
+
+	if (listen(sock, u->err)) {
+		u->sock = -4;
 		u->err = errno;
 		goto error;
 	}
 
 	/* make the socket non-blocking */
 	if (fcntl(sock, F_SETFL, O_NONBLOCK)) {
-		u->sock = -4;
+		u->sock = -5;
 		u->err = errno;
 		goto error;
 	}
@@ -196,11 +202,15 @@ unix_listen_reap(struct lem_async *a)
 				u->path, strerror(u->err));
 		break;
 	case 3:
+		lua_pushfstring(T, "error setting permissions on '%s': %s",
+				u->path, strerror(u->err));
+		break;
+	case 4:
 		lua_pushfstring(T, "error listening on '%s': %s",
 				u->path, strerror(u->err));
 		break;
 
-	case 4:
+	case 5:
 		lua_pushfstring(T, "error making socket non-blocking: %s",
 		                strerror(u->err));
 		break;
@@ -214,19 +224,41 @@ unix_listen(lua_State *T)
 {
 	size_t len;
 	const char *path = luaL_checklstring(T, 1, &len);
-	int backlog = (int)luaL_optnumber(T, 2, MAXPENDING);
+	int mode = (int)luaL_optnumber(T, 2, -1);
+	int backlog = (int)luaL_optnumber(T, 3, MAXPENDING);
 	struct unix_create *u;
 
 	if (len >= UNIX_PATH_MAX)
 		return luaL_argerror(T, 1, "path too long");
 
+	if (mode != -1) {
+		int octal = 0;
+		int i;
+
+		for (i = 1; i <= 64; i *= 8) {
+			int digit = mode % 10;
+			if (digit > 7)
+				goto mode_error;
+
+			octal += digit * i;
+			mode /= 10;
+		}
+		if (mode != 0)
+			goto mode_error;
+
+		mode = octal;
+	}
+
 	u = lem_xmalloc(sizeof(struct unix_create));
 	u->path = path;
 	u->len = len;
+	u->sock = mode;
 	u->err = backlog;
 	lem_async_do(&u->a, T, unix_listen_work, unix_listen_reap);
 
 	lua_settop(T, 1);
 	lua_pushvalue(T, lua_upvalueindex(1));
 	return lua_yield(T, 2);
+mode_error:
+	return luaL_argerror(T, 2, "invalid mode");
 }
