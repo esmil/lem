@@ -67,6 +67,38 @@ io_strerror(lua_State *T, int err)
 	return 2;
 }
 
+static int
+io_optperm(lua_State *T, int idx)
+{
+	lua_Number n = luaL_optnumber(T, idx, -1);
+	int mode = n;
+	int octal;
+	int i;
+
+	if ((lua_Number)mode != n)
+		goto error;
+	if (mode == -1)
+		return -1;
+	if (mode < 0)
+		goto error;
+
+	octal = 0;
+	for (i = 1; i <= 64; i *= 8) {
+		int digit = mode % 10;
+		if (digit > 7)
+			goto error;
+
+		octal += digit * i;
+		mode /= 10;
+	}
+	if (mode != 0)
+		goto error;
+
+	return octal;
+error:
+	return luaL_argerror(T, idx, "invalid permissions");
+}
+
 #include "file.c"
 #include "stream.c"
 #include "server.c"
@@ -88,7 +120,8 @@ io_open_work(struct lem_async *a)
 	struct stat st;
 
 	fd = open(o->path, o->flags | O_NONBLOCK,
-			S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+			o->fd >= 0 ? o->fd :
+			S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 	if (fd < 0) {
 		o->flags = -errno;
 		return;
@@ -108,7 +141,6 @@ io_open_work(struct lem_async *a)
 		o->flags = 0;
 		break;
 
-	case S_IFSOCK:
 	case S_IFCHR:
 	case S_IFIFO:
 		o->flags = 1;
@@ -191,6 +223,7 @@ io_open(lua_State *T)
 {
 	const char *path = luaL_checkstring(T, 1);
 	int flags = io_mode_to_flags(luaL_optstring(T, 2, "r"));
+	int perm = io_optperm(T, 3);
 	struct open *o;
 
 	if (flags < 0)
@@ -198,6 +231,7 @@ io_open(lua_State *T)
 
 	o = lem_xmalloc(sizeof(struct open));
 	o->path = path;
+	o->fd = perm;
 	o->flags = flags;
 	lem_async_do(&o->a, T, io_open_work, io_open_reap);
 

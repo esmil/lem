@@ -224,41 +224,21 @@ unix_listen(lua_State *T)
 {
 	size_t len;
 	const char *path = luaL_checklstring(T, 1, &len);
-	int mode = (int)luaL_optnumber(T, 2, -1);
+	int perm = io_optperm(T, 2);
 	int backlog = (int)luaL_optnumber(T, 3, MAXPENDING);
 	struct unix_create *u;
 
 	if (len >= UNIX_PATH_MAX)
 		return luaL_argerror(T, 1, "path too long");
 
-	if (mode != -1) {
-		int octal = 0;
-		int i;
-
-		for (i = 1; i <= 64; i *= 8) {
-			int digit = mode % 10;
-			if (digit > 7)
-				goto mode_error;
-
-			octal += digit * i;
-			mode /= 10;
-		}
-		if (mode != 0)
-			goto mode_error;
-
-		mode = octal;
-	}
-
 	u = lem_xmalloc(sizeof(struct unix_create));
 	u->path = path;
 	u->len = len;
-	u->sock = mode;
+	u->sock = perm;
 	u->err = backlog;
 	lem_async_do(&u->a, T, unix_listen_work, unix_listen_reap);
 
 	lua_settop(T, 1);
 	lua_pushvalue(T, lua_upvalueindex(1));
 	return lua_yield(T, 2);
-mode_error:
-	return luaL_argerror(T, 2, "invalid mode");
 }
