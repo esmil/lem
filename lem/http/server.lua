@@ -110,7 +110,7 @@ local status_string = {
 M.status_string = status_string
 
 function M.not_found(req, res)
-	if req.headers['Expect'] ~= '100-continue' then
+	if req.headers['expect'] ~= '100-continue' then
 		req:body()
 	end
 
@@ -212,7 +212,7 @@ do
 				M.version_not_supported(req, res)
 				version = '1.1'
 			else
-				local expect = req.headers['Expect']
+				local expect = req.headers['expect']
 				if expect and expect ~= '100-continue' then
 					M.expectation_failed(req, res)
 				else
@@ -264,7 +264,7 @@ do
 				headers['Server'] = 'Hathaway/0.1 LEM/0.3'
 			end
 
-			if req.headers['Connection'] == 'close' and headers['Connection'] == nil then
+			if req.headers['connection'] == 'close' and headers['Connection'] == nil then
 				headers['Connection'] = 'close'
 			end
 

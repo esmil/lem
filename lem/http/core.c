@@ -1,6 +1,6 @@
 /*
  * This file is part of LEM, a Lua Event Machine.
- * Copyright 2011-2012 Emil Renner Berthing
+ * Copyright 2011-2013 Emil Renner Berthing
  *
  * LEM is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as
@@ -206,8 +206,20 @@ parse_http_process(lua_State *T, struct lem_inputbuf *b)
 		case CMIV:
 		case CNUM:
 		case CTXT:
-		case SKEY:
 		case SVAL:
+			b->buf[w++] = ch;
+			break;
+
+		case XKEY:
+			state = SKEY;
+			lua_pushlstring(T, b->buf, w);
+			lua_rawset(T, -3);
+			w = 0;
+			/* fallthrough */
+
+		case SKEY:
+			if (ch >= 'A' && ch <= 'Z')
+				ch += ('a' - 'A');
 			b->buf[w++] = ch;
 			break;
 
@@ -280,14 +292,6 @@ parse_http_process(lua_State *T, struct lem_inputbuf *b)
 		case XVAL:
 			state = SVAL;
 			b->buf[w++] = ' ';
-			b->buf[w++] = ch;
-			break;
-
-		case XKEY:
-			state = SKEY;
-			lua_pushlstring(T, b->buf, w);
-			lua_rawset(T, -3);
-			w = 0;
 			b->buf[w++] = ch;
 			break;
 

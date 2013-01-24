@@ -1,6 +1,6 @@
 --
 -- This file is part of LEM, a Lua Event Machine.
--- Copyright 2011-2012 Emil Renner Berthing
+-- Copyright 2011-2013 Emil Renner Berthing
 --
 -- LEM is free software: you can redistribute it and/or modify it
 -- under the terms of the GNU Lesser General Public License as
@@ -32,13 +32,13 @@ local tonumber = tonumber
 local concat = table.concat
 
 function http.Request:body()
-	local len, body = self.headers['Content-Length'], ''
+	local len, body = self.headers['content-length'], ''
 	if not len then return body end
 
 	len = tonumber(len)
 	if len <= 0 then return body end
 
-	if self.headers['Expect'] == '100-continue' then
+	if self.headers['expect'] == '100-continue' then
 		local ok, err = self.client:send('HTTP/1.1 100 Continue\r\n\r\n')
 		if not ok then return nil, err end
 	end
@@ -75,17 +75,17 @@ function http.Response:body_chunked()
 	line, err = client:read('*l')
 	if not line then return nil, err end
 
-	return t
+	return concat(t)
 end
 
 function http.Response:body()
-	if self.headers['Transfer-Encoding'] == 'chunked' then
-		return concat(self:body_chunked())
+	if self.headers['transfer-encoding'] == 'chunked' then
+		return self:body_chunked()
 	end
 
-	local num = self.headers['Content-Length']
+	local num = self.headers['content-length']
 	if not num then
-		if self.headers['Connection'] == 'close' then
+		if self.headers['connection'] == 'close' then
 			return self.client:read('*a')
 		end
 		return nil, 'no content length specified'

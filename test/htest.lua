@@ -40,7 +40,7 @@ GET('/self', function(req, res)
 end)
 
 GET('/dump', function(req, res)
-	local accept = req.headers['Accept']
+	local accept = req.headers['accept']
 	if accept and accept:match('application/xhtml%+xml') then
 		res.headers['Content-Type'] = 'application/xhtml+xml'
 	else
@@ -129,7 +129,7 @@ end)
 POST('/quit', function(req, res)
 	local body = req:body()
 
-	req.headers['Content-Type'] = 'text/plain'
+	res.headers['Content-Type'] = 'text/plain'
 
 	if body == 'quit=secret' then
 		res:add("Bye o/\n")
