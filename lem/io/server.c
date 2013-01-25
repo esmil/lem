@@ -16,10 +16,6 @@
  * License along with LEM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAXPENDING
-#define MAXPENDING      50
-#endif
-
 static int
 server_closed(lua_State *T)
 {
