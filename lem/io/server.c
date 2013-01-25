@@ -94,13 +94,10 @@ server_interrupt(lua_State *T)
 }
 
 static int
-server__accept(lua_State *T, struct ev_io *w)
+server__accept(lua_State *T, struct ev_io *w, int mt)
 {
-	struct sockaddr client_addr;
-	unsigned int client_addrlen;
-	int sock;
+	int sock = accept(w->fd, NULL, NULL);
 
-	sock = accept(w->fd, &client_addr, &client_addrlen);
 	if (sock < 0) {
 		if (errno == EAGAIN || errno == ECONNABORTED)
 			return 0;
@@ -122,7 +119,7 @@ server__accept(lua_State *T, struct ev_io *w)
 		return 2;
 	}
 
-	stream_new(T, sock, lua_upvalueindex(1));
+	stream_new(T, sock, mt);
 	return 1;
 }
 
@@ -133,7 +130,7 @@ server_accept_cb(EV_P_ struct ev_io *w, int revents)
 
 	(void)revents;
 
-	ret = server__accept(w->data, w);
+	ret = server__accept(w->data, w, 2);
 	if (ret == 0)
 		return;
 
@@ -155,31 +152,29 @@ server_accept(lua_State *T)
 	if (w->data != NULL)
 		return io_busy(T);
 
-	ret = server__accept(T, w);
+	ret = server__accept(T, w, lua_upvalueindex(1));
 	if (ret > 0)
 		return ret;
 
-	lua_settop(T, 1);
 	w->cb = server_accept_cb;
 	w->data = T;
 	ev_io_start(LEM_ w);
-	return lua_yield(T, 1);
+	lua_settop(T, 1);
+	lua_pushvalue(T, lua_upvalueindex(1));
+	return lua_yield(T, 2);
 }
 
 static void
 server_autospawn_cb(EV_P_ struct ev_io *w, int revents)
 {
 	lua_State *T = w->data;
-	struct sockaddr client_addr;
-	unsigned int client_addrlen;
 	int sock;
 	lua_State *S;
 
 	(void)revents;
 
 	/* dequeue the incoming connection */
-	client_addrlen = sizeof(struct sockaddr);
-	sock = accept(w->fd, &client_addr, &client_addrlen);
+	sock = accept(w->fd, NULL, NULL);
 	if (sock < 0) {
 		if (errno == EAGAIN || errno == ECONNABORTED)
 			return;
@@ -200,14 +195,12 @@ server_autospawn_cb(EV_P_ struct ev_io *w, int revents)
 
 	S = lem_newthread();
 
-	/* copy handler function to thread */
+	/* copy handler function */
 	lua_pushvalue(T, 2);
-	lua_xmove(T, S, 1);
-
 	/* create stream */
-	stream_new(T, sock, lua_upvalueindex(1));
-	/* move stream to new thread */
-	lua_xmove(T, S, 1);
+	stream_new(T, sock, 3);
+	/* move function and stream to new thread */
+	lua_xmove(T, S, 2);
 
 	lem_queue(S, 1);
 	return;
