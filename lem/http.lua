@@ -39,7 +39,7 @@ function http.Request:body()
 	if len <= 0 then return body end
 
 	if self.headers['expect'] == '100-continue' then
-		local ok, err = self.client:send('HTTP/1.1 100 Continue\r\n\r\n')
+		local ok, err = self.client:write('HTTP/1.1 100 Continue\r\n\r\n')
 		if not ok then return nil, err end
 	end
 
