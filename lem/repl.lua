@@ -85,7 +85,7 @@ local function repl(name, ins, outs)
 			res, err = ins:read('*l')
 			if not res then return nil, err end
 
-			line = line .. res
+			line = line .. ('\n' .. res)
 		end
 	end
 end
