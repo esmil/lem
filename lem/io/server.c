@@ -99,9 +99,16 @@ server__accept(lua_State *T, struct ev_io *w, int mt)
 	int sock = accept(w->fd, NULL, NULL);
 
 	if (sock < 0) {
-		if (errno == EAGAIN || errno == EINTR || errno == ECONNABORTED)
+		switch (errno) {
+		case EAGAIN: case EINTR: case ECONNABORTED:
+		case ENETDOWN: case EPROTO: case ENOPROTOOPT:
+		case EHOSTDOWN:
+#ifdef ENONET
+		case ENONET:
+#endif
+		case EHOSTUNREACH: case EOPNOTSUPP: case ENETUNREACH:
 			return 0;
-
+		}
 		lua_pushnil(T);
 		lua_pushfstring(T, "error accepting connection: %s",
 		                strerror(errno));
@@ -182,8 +189,16 @@ server_autospawn_cb(EV_P_ struct ev_io *w, int revents)
 	/* dequeue the incoming connection */
 	sock = accept(w->fd, NULL, NULL);
 	if (sock < 0) {
-		if (errno == EAGAIN || errno == EINTR || errno == ECONNABORTED)
+		switch (errno) {
+		case EAGAIN: case EINTR: case ECONNABORTED:
+		case ENETDOWN: case EPROTO: case ENOPROTOOPT:
+		case EHOSTDOWN:
+#ifdef ENONET
+		case ENONET:
+#endif
+		case EHOSTUNREACH: case EOPNOTSUPP: case ENETUNREACH:
 			return;
+		}
 		lua_pushnil(T);
 		lua_pushfstring(T, "error accepting connection: %s",
 		                strerror(errno));
