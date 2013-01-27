@@ -102,8 +102,6 @@ server__accept(lua_State *T, struct ev_io *w, int mt)
 		if (errno == EAGAIN || errno == ECONNABORTED)
 			return 0;
 
-		close(w->fd);
-		w->fd = -1;
 		lua_pushnil(T);
 		lua_pushfstring(T, "error accepting connection: %s",
 		                strerror(errno));
@@ -136,6 +134,10 @@ server_accept_cb(EV_P_ struct ev_io *w, int revents)
 
 	w->data = NULL;
 	ev_io_stop(EV_A_ w);
+	if (ret == 2) {
+		close(w->fd);
+		w->fd = -1;
+	}
 	lem_queue(w->data, ret);
 }
 
@@ -143,7 +145,6 @@ static int
 server_accept(lua_State *T)
 {
 	struct ev_io *w;
-	int ret;
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
 	w = lua_touserdata(T, 1);
@@ -152,9 +153,14 @@ server_accept(lua_State *T)
 	if (w->data != NULL)
 		return io_busy(T);
 
-	ret = server__accept(T, w, lua_upvalueindex(1));
-	if (ret > 0)
-		return ret;
+	switch (server__accept(T, w, lua_upvalueindex(1))) {
+	case 1:
+		return 1;
+	case 2:
+		close(w->fd);
+		w->fd= -1;
+		return 2;
+	}
 
 	w->cb = server_accept_cb;
 	w->data = T;
