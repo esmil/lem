@@ -394,9 +394,8 @@ file_lock_work(struct lem_async *a)
 		.l_start = f->lock.start,
 		.l_len = f->lock.len,
 	};
-	int ret = fcntl(f->fd, F_SETLK, &fl);
 
-	if (ret == -1)
+	if (fcntl(f->fd, F_SETLK, &fl) == -1)
 		f->ret = errno;
 	else
 		f->ret = 0;

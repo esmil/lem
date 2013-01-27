@@ -121,10 +121,17 @@ io_open_work(struct lem_async *a)
 	int fd;
 	struct stat st;
 
-	fd = open(o->path, o->flags | O_NONBLOCK,
-			o->fd >= 0 ? o->fd :
+	fd = open(o->path, o->flags
+#ifdef O_CLOEXEC
+			| O_CLOEXEC
+#endif
+			| O_NONBLOCK, o->fd >= 0 ? o->fd :
 			S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-	if (fd < 0) {
+	if (fd < 0
+#ifndef O_CLOXEC
+			|| fcntl(fd, F_SETFD, FD_CLOEXEC) == -1
+#endif
+			) {
 		o->flags = -errno;
 		return;
 	}
@@ -249,7 +256,7 @@ push_stdstream(lua_State *L, int fd)
 	struct stream *s;
 
 	/* make the socket non-blocking */
-	if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
+	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
 		luaL_error(L, "error making fd %d non-blocking: %s",
 				fd, strerror(errno));
 

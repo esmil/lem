@@ -422,7 +422,7 @@ stream_sendfile_work(struct lem_async *a)
 	struct stream *s = sf->s;
 
 	/* make socket blocking */
-	if (fcntl(s->w.fd, F_SETFL, 0)) {
+	if (fcntl(s->w.fd, F_SETFL, 0) == -1) {
 		sf->ret = errno;
 		return;
 	}
@@ -461,7 +461,7 @@ stream_sendfile_work(struct lem_async *a)
 #endif
 
 	/* make socket non-blocking again */
-	if (fcntl(s->w.fd, F_SETFL, O_NONBLOCK)) {
+	if (fcntl(s->w.fd, F_SETFL, O_NONBLOCK) == -1) {
 		sf->ret = errno;
 		return;
 	}
@@ -581,7 +581,7 @@ stream_popen(lua_State *T)
 	}
 
 	/* make the pipe non-blocking */
-	if (fcntl(fd[0], F_SETFL, O_NONBLOCK) < 0) {
+	if (fcntl(fd[0], F_SETFL, O_NONBLOCK) == -1) {
 		err = errno;
 		close(fd[0]);
 		return io_strerror(T, err);

@@ -60,10 +60,17 @@ tcp_connect_work(struct lem_async *a)
 	/* try the addresses in the order returned */
 	for (addr = result; addr; addr = addr->ai_next) {
 		sock = socket(addr->ai_family,
+#ifdef SOCK_CLOEXEC
+				SOCK_CLOEXEC |
+#endif
 				addr->ai_socktype, addr->ai_protocol);
 
 		lem_debug("addr->ai_family = %d, sock = %d", addr->ai_family, sock);
-		if (sock < 0) {
+		if (sock < 0
+#ifndef SOCK_CLOEXEC
+				|| fcntl(sock, F_SETFD, FD_CLOEXEC) == -1
+#endif
+				) {
 			int err = errno;
 
 			if (err == EAFNOSUPPORT || err == EPROTONOSUPPORT)
@@ -81,8 +88,8 @@ tcp_connect_work(struct lem_async *a)
 		}
 
 		/* make the socket non-blocking */
-		if (fcntl(sock, F_SETFL, O_NONBLOCK)) {
-			g->sock = -3;
+		if (fcntl(sock, F_SETFL, O_NONBLOCK) == -1) {
+			g->sock = -2;
 			g->err = errno;
 			goto error;
 		}
@@ -91,7 +98,7 @@ tcp_connect_work(struct lem_async *a)
 		goto out;
 	}
 
-	g->sock = -4;
+	g->sock = -3;
 	goto out;
 
 error:
@@ -127,10 +134,6 @@ tcp_connect_reap(struct lem_async *a)
 				strerror(g->err));
 		break;
 	case 3:
-		lua_pushfstring(T, "error making socket non-blocking: %s",
-		                strerror(g->err));
-		break;
-	case 4:
 		lua_pushfstring(T, "error connecting to '%s:%s'",
 				g->node, g->service);
 		break;
@@ -185,9 +188,17 @@ tcp_listen_work(struct lem_async *a)
 	}
 
 	/* create the TCP socket */
-	sock = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+	sock = socket(addr->ai_family,
+#ifdef SOCK_CLOEXEC
+			SOCK_CLOEXEC |
+#endif
+			addr->ai_socktype, addr->ai_protocol);
 	lem_debug("addr->ai_family = %d, sock = %d", addr->ai_family, sock);
-	if (sock < 0) {
+	if (sock < 0
+#ifndef SOCK_CLOEXEC
+			|| fcntl(sock, F_SETFD, FD_CLOEXEC) == -1
+#endif
+			) {
 		g->sock = -2;
 		g->err = errno;
 		goto out;
@@ -216,8 +227,8 @@ tcp_listen_work(struct lem_async *a)
 	}
 
 	/* make the socket non-blocking */
-	if (fcntl(sock, F_SETFL, O_NONBLOCK)) {
-		g->sock = -5;
+	if (fcntl(sock, F_SETFL, O_NONBLOCK) == -1) {
+		g->sock = -2;
 		g->err = errno;
 		goto error;
 	}
@@ -276,11 +287,6 @@ tcp_listen_reap(struct lem_async *a)
 	case 4:
 		lua_pushfstring(T, "error listening on '%s:%s': %s",
 				g->node, g->service, strerror(g->err));
-		break;
-
-	case 5:
-		lua_pushfstring(T, "error making socket non-blocking: %s",
-		                strerror(g->err));
 		break;
 	}
 	free(g);

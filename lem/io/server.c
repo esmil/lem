@@ -96,7 +96,11 @@ server_interrupt(lua_State *T)
 static int
 server__accept(lua_State *T, struct ev_io *w, int mt)
 {
+#ifdef SOCK_CLOEXEC
+	int sock = accept4(w->fd, NULL, NULL, SOCK_CLOEXEC | SOCK_NONBLOCK);
+#else
 	int sock = accept(w->fd, NULL, NULL);
+#endif
 
 	if (sock < 0) {
 		switch (errno) {
@@ -114,16 +118,17 @@ server__accept(lua_State *T, struct ev_io *w, int mt)
 		                strerror(errno));
 		return 2;
 	}
-
-	/* make the socket non-blocking */
-	if (fcntl(sock, F_SETFL, O_NONBLOCK) < 0) {
+#ifndef SOCK_CLOEXEC
+	/* set FD_CLOEXEC and make the socket non-blocking */
+	if (fcntl(sock, F_SETFD, FD_CLOEXEC) == -1 ||
+			fcntl(sock, F_SETFL, O_NONBLOCK) == -1) {
 		close(sock);
 		lua_pushnil(T);
-		lua_pushfstring(T, "error making socket non-blocking: %s",
+		lua_pushfstring(T, "error setting socket flags: %s",
 		                strerror(errno));
 		return 2;
 	}
-
+#endif
 	stream_new(T, sock, mt);
 	return 1;
 }
@@ -187,7 +192,11 @@ server_autospawn_cb(EV_P_ struct ev_io *w, int revents)
 	(void)revents;
 
 	/* dequeue the incoming connection */
+#ifdef SOCK_CLOEXEC
+	sock = accept4(w->fd, NULL, NULL, SOCK_CLOEXEC | SOCK_NONBLOCK);
+#else
 	sock = accept(w->fd, NULL, NULL);
+#endif
 	if (sock < 0) {
 		switch (errno) {
 		case EAGAIN: case EINTR: case ECONNABORTED:
@@ -204,16 +213,17 @@ server_autospawn_cb(EV_P_ struct ev_io *w, int revents)
 		                strerror(errno));
 		goto error;
 	}
-
-	/* make the socket non-blocking */
-	if (fcntl(sock, F_SETFL, O_NONBLOCK) < 0) {
+#ifndef SOCK_CLOEXEC
+	/* set FD_CLOEXEC and make the socket non-blocking */
+	if (fcntl(sock, F_SETFD, FD_CLOEXEC) == -1 ||
+			fcntl(sock, F_SETFL, O_NONBLOCK) == -1) {
 		close(sock);
 		lua_pushnil(T);
-		lua_pushfstring(T, "error making socket non-blocking: %s",
+		lua_pushfstring(T, "error setting socket flags: %s",
 		                strerror(errno));
 		goto error;
 	}
-
+#endif
 	S = lem_newthread();
 
 	/* copy handler function */
