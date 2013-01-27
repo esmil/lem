@@ -99,7 +99,7 @@ server__accept(lua_State *T, struct ev_io *w, int mt)
 	int sock = accept(w->fd, NULL, NULL);
 
 	if (sock < 0) {
-		if (errno == EAGAIN || errno == ECONNABORTED)
+		if (errno == EAGAIN || errno == EINTR || errno == ECONNABORTED)
 			return 0;
 
 		lua_pushnil(T);
@@ -182,7 +182,7 @@ server_autospawn_cb(EV_P_ struct ev_io *w, int revents)
 	/* dequeue the incoming connection */
 	sock = accept(w->fd, NULL, NULL);
 	if (sock < 0) {
-		if (errno == EAGAIN || errno == ECONNABORTED)
+		if (errno == EAGAIN || errno == EINTR || errno == ECONNABORTED)
 			return;
 		lua_pushnil(T);
 		lua_pushfstring(T, "error accepting connection: %s",

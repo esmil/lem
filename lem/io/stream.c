@@ -115,7 +115,7 @@ stream__readp(lua_State *T, struct stream *s)
 	err = errno;
 	lem_debug("read %ld bytes from %d", bytes, s->r.fd);
 
-	if (bytes < 0 && err == EAGAIN)
+	if (bytes < 0 && (err == EAGAIN || err == EINTR))
 		return 0;
 
 	if (bytes == 0 || err == ECONNRESET || err == EPIPE)
@@ -221,7 +221,7 @@ stream__write(lua_State *T, struct stream *s)
 	}
 	err = errno;
 
-	if (bytes < 0 && err == EAGAIN)
+	if (bytes < 0 && (err == EAGAIN || err == EINTR))
 		return 0;
 
 	s->open = 0;
