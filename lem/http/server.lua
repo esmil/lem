@@ -320,6 +320,10 @@ do
 		return self.socket:autospawn(function(...) return handleHTTP(self, ...) end)
 	end
 
+	function Server:close()
+		return self.socket:close()
+	end
+
 	local type, setmetatable = type, setmetatable
 
 	function M.new(host, port, handler)

@@ -167,6 +167,7 @@ do
 		end
 		if not server then M.debug('new', err) return nil, err end
 
+		M.server = server
 		server.debug = M.debug
 
 		local ok, err = server:run()
