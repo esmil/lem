@@ -290,10 +290,7 @@ stream_write(lua_State *T)
 	return lua_yield(T, top);
 }
 
-#ifndef TCP_CORK
-#define TCP_CORK TCP_NOPUSH
-#endif
-
+#ifdef TCP_CORK
 static int
 stream_setcork(lua_State *T, int state)
 {
@@ -324,6 +321,7 @@ stream_uncork(lua_State *T)
 {
 	return stream_setcork(T, 0);
 }
+#endif
 
 static int
 stream_getpeer(lua_State *T)

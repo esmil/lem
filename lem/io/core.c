@@ -322,12 +322,14 @@ luaopen_lem_io_core(lua_State *L)
 	/* mt.write = <stream_write> */
 	lua_pushcfunction(L, stream_write);
 	lua_setfield(L, -2, "write");
+#ifdef TCP_CORK
 	/* mt.cork = <stream_cork> */
 	lua_pushcfunction(L, stream_cork);
 	lua_setfield(L, -2, "cork");
 	/* mt.uncork = <stream_uncork> */
 	lua_pushcfunction(L, stream_uncork);
 	lua_setfield(L, -2, "uncork");
+#endif
 	/* mt.getpeer = <stream_getpeer> */
 	lua_pushcfunction(L, stream_getpeer);
 	lua_setfield(L, -2, "getpeer");

@@ -69,6 +69,15 @@ do
 	end
 end
 
+if not io.Stream.cork then
+	function io.Stream:cork()
+		return nil, 'Operation not supported'
+	end
+	function io.Stream:uncork()
+		return nil, 'Operation not supported'
+	end
+end
+
 do
 	local MultiServer = {}
 	MultiServer.__index = MultiServer
