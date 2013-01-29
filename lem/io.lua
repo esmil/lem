@@ -45,6 +45,19 @@ do
 	function io.read(...)
 		return stdin:read(...)
 	end
+
+	local open, error = io.open, error
+	function io.lines(filename, fmt)
+		if not filename then return stdin:lines(fmt) end
+		if not fmt then fmt = '*l' end
+		local file, err = open(filename)
+		if not file then error(err, 2) end
+		return function(s)
+			local line = s:read(fmt)
+			if not line then s:close() end
+			return line
+		end, file
+	end
 end
 
 do
@@ -69,13 +82,19 @@ do
 	end
 end
 
+function io.File:lines(fmt)
+	if not fmt then fmt = '*l' end
+	return function(s)
+		return s:read(fmt)
+	end, self
+end
+io.Stream.lines = io.File.lines
+
 if not io.Stream.cork then
 	function io.Stream:cork()
 		return nil, 'Operation not supported'
 	end
-	function io.Stream:uncork()
-		return nil, 'Operation not supported'
-	end
+	io.Stream.uncork = io.Stream.cork
 end
 
 do
