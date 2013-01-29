@@ -30,11 +30,13 @@
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
+#include <spawn.h>
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 #include <sys/un.h>
 #include <sys/ucred.h>
 #include <netinet/in.h>
+extern char **environ;
 #ifndef UNIX_PATH_MAX
 #define UNIX_PATH_MAX 104
 #endif
@@ -107,6 +109,9 @@ error:
 #include "tcp.c"
 #include "unix.c"
 
+/*
+ * io.open()
+ */
 struct open {
 	struct lem_async a;
 	const char *path;
@@ -249,6 +254,70 @@ io_open(lua_State *T)
 	return lua_yield(T, 3);
 }
 
+/*
+ * io.popen()
+ */
+static const char *const io_popen_modes[] = { "r", "w", "rw", NULL };
+
+static int
+io_popen(lua_State *T)
+{
+	const char *cmd = luaL_checkstring(T, 1);
+	int mode = luaL_checkoption(T, 2, "r", io_popen_modes);
+	char *const argv[4] = { "/bin/sh", "-c", (char *)cmd, NULL };
+	posix_spawn_file_actions_t fa;
+	int fd[2];
+	int err;
+
+	posix_spawn_file_actions_init(&fa);
+	switch (mode) {
+	case 0: /* "r" */
+		if (pipe(fd))
+			return io_strerror(T, errno);
+		posix_spawn_file_actions_adddup2(&fa, fd[1], 1);
+		posix_spawn_file_actions_addclose(&fa, fd[1]);
+		break;
+	case 1: /* "w" */
+		if (pipe(fd))
+			return io_strerror(T, errno);
+		err = fd[0];
+		fd[0] = fd[1];
+		fd[1] = err;
+		posix_spawn_file_actions_adddup2(&fa, fd[1], 0);
+		posix_spawn_file_actions_addclose(&fa, fd[1]);
+		break;
+	case 2: /* "rw" */
+		if (socketpair(AF_UNIX, SOCK_STREAM, 0, fd))
+			return io_strerror(T, errno);
+		posix_spawn_file_actions_adddup2(&fa, fd[1], 0);
+		posix_spawn_file_actions_adddup2(&fa, fd[1], 1);
+		posix_spawn_file_actions_addclose(&fa, fd[1]);
+		break;
+	}
+
+	/* set our socket flags */
+	if (fcntl(fd[0], F_SETFD, FD_CLOEXEC) == -1 ||
+			fcntl(fd[0], F_SETFL, O_NONBLOCK) == -1) {
+		err = errno;
+		goto error;
+	}
+
+	err = posix_spawn(NULL, argv[0], &fa, NULL, argv, environ);
+	lem_debug("err = %d, %s", err, strerror(err));
+	if (err)
+		goto error;
+
+	posix_spawn_file_actions_destroy(&fa);
+	close(fd[1]);
+	stream_new(T, fd[0], lua_upvalueindex(1));
+	return 1;
+error:
+	posix_spawn_file_actions_destroy(&fa);
+	close(fd[0]);
+	close(fd[1]);
+	return io_strerror(T, err);
+}
+
 static void
 push_stdstream(lua_State *L, int fd)
 {
@@ -384,7 +453,7 @@ luaopen_lem_io_core(lua_State *L)
 	lua_setfield(L, -2, "open");
 	/* insert popen function */
 	lua_getfield(L, -1, "Stream"); /* upvalue 1 = Stream */
-	lua_pushcclosure(L, stream_popen, 1);
+	lua_pushcclosure(L, io_popen, 1);
 	lua_setfield(L, -2, "popen");
 
 	/* create tcp table */
