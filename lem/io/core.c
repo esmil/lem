@@ -255,12 +255,11 @@ push_stdstream(lua_State *L, int fd)
 	struct stream *s;
 
 	/* make the socket non-blocking */
-	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
-		luaL_error(L, "error making fd %d non-blocking: %s",
-				fd, strerror(errno));
+	fcntl(fd, F_SETFL, O_NONBLOCK);
 
 	s = stream_new(L, fd, -2);
-	s->open = 2; /* don't close this in __gc() */
+	/* don't close this in __gc(), but make it blocking again */
+	s->open = 2;
 }
 
 int

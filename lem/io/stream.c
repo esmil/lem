@@ -56,6 +56,8 @@ stream_gc(lua_State *T)
 
 	if (s->open & 1)
 		close(s->r.fd);
+	if (s->open & 2)
+		fcntl(s->w.fd, F_SETFL, 0);
 
 	return 0;
 }
