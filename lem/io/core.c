@@ -127,16 +127,15 @@ io_open_work(struct lem_async *a)
 #endif
 			| O_NONBLOCK, o->fd >= 0 ? o->fd :
 			S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-	if (fd < 0
-#ifndef O_CLOXEC
-			|| fcntl(fd, F_SETFD, FD_CLOEXEC) == -1
-#endif
-			) {
+	if (fd < 0) {
 		o->flags = -errno;
 		return;
 	}
-
-	if (fstat(fd, &st)) {
+	if (
+#ifndef O_CLOXEC
+			fcntl(fd, F_SETFD, FD_CLOEXEC) == -1 ||
+#endif
+			fstat(fd, &st)) {
 		o->flags = -errno;
 		close(fd);
 		return;

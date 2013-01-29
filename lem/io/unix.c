@@ -36,16 +36,18 @@ unix_connect_work(struct lem_async *a)
 			SOCK_CLOEXEC |
 #endif
 			SOCK_STREAM, 0);
-	if (sock < 0
-#ifndef SOCK_CLOEXEC
-			|| fcntl(sock, F_SETFD, FD_CLOEXEC) == -1
-#endif
-			) {
+	if (sock < 0) {
 		u->sock = -1;
 		u->err = errno;
 		return;
 	}
-
+#ifndef SOCK_CLOEXEC
+	if (fcntl(sock, F_SETFD, FD_CLOEXEC) == -1) {
+		u->sock = -1;
+		u->err = errno;
+		goto error;
+	}
+#endif
 	addr.sun_family = AF_UNIX;
 	memcpy(addr.sun_path, u->path, u->len+1);
 
@@ -133,15 +135,18 @@ unix_listen_work(struct lem_async *a)
 #endif
 			SOCK_STREAM, 0);
 	if (sock < 0
-#ifndef SOCK_CLOEXEC
-			|| fcntl(sock, F_SETFD, FD_CLOEXEC) == -1
-#endif
 			) {
 		u->sock = -1;
 		u->err = errno;
 		return;
 	}
-
+#ifndef SOCK_CLOEXEC
+	if (fcntl(sock, F_SETFD, FD_CLOEXEC) == -1) {
+		u->sock = -1;
+		u->err = errno;
+		goto error;
+	}
+#endif
 	addr.sun_family = AF_UNIX;
 	memcpy(addr.sun_path, u->path, u->len+1);
 

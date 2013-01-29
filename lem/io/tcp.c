@@ -66,11 +66,7 @@ tcp_connect_work(struct lem_async *a)
 				addr->ai_socktype, addr->ai_protocol);
 
 		lem_debug("addr->ai_family = %d, sock = %d", addr->ai_family, sock);
-		if (sock < 0
-#ifndef SOCK_CLOEXEC
-				|| fcntl(sock, F_SETFD, FD_CLOEXEC) == -1
-#endif
-				) {
+		if (sock < 0) {
 			int err = errno;
 
 			if (err == EAFNOSUPPORT || err == EPROTONOSUPPORT)
@@ -80,7 +76,13 @@ tcp_connect_work(struct lem_async *a)
 			g->err = err;
 			goto out;
 		}
-
+#ifndef SOCK_CLOEXEC
+		if (fcntl(sock, F_SETFD, FD_CLOEXEC) == -1) {
+			g->sock = -2;
+			g->err = errno;
+			goto error;
+		}
+#endif
 		/* connect */
 		if (connect(sock, addr->ai_addr, addr->ai_addrlen)) {
 			close(sock);
@@ -194,16 +196,18 @@ tcp_listen_work(struct lem_async *a)
 #endif
 			addr->ai_socktype, addr->ai_protocol);
 	lem_debug("addr->ai_family = %d, sock = %d", addr->ai_family, sock);
-	if (sock < 0
-#ifndef SOCK_CLOEXEC
-			|| fcntl(sock, F_SETFD, FD_CLOEXEC) == -1
-#endif
-			) {
+	if (sock < 0) {
 		g->sock = -2;
 		g->err = errno;
 		goto out;
 	}
-
+#ifndef SOCK_CLOEXEC
+	if (fcntl(sock, F_SETFD, FD_CLOEXEC) == -1) {
+		g->sock = -2;
+		g->err = errno;
+		goto error;
+	}
+#endif
 	/* set SO_REUSEADDR option if possible */
 	ret = 1;
 	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &ret, sizeof(int));
