@@ -46,11 +46,11 @@ do
 		return stdin:read(...)
 	end
 
-	local open, error = io.open, error
+	local streamfile, error = io.streamfile, error
 	function io.lines(filename, fmt)
 		if not filename then return stdin:lines(fmt) end
 		if not fmt then fmt = '*l' end
-		local file, err = open(filename)
+		local file, err = streamfile(filename)
 		if not file then error(err, 2) end
 		return function(s)
 			local line = s:read(fmt)

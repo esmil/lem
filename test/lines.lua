@@ -26,19 +26,31 @@ local io    = require 'lem.io'
 local format, write = string.format, io.write
 
 local n = 0
+
+if not arg[1] then
+   io.stderr:write("I need a file..\n")
+   utils.exit(1)
+end
+
 ---[[
-local file = assert(io.open('PKGBUILD'))
+local file, err = io.streamfile(arg[1])
+--local file, err = io.open(arg[1])
+
+if not file then
+	io.stderr:write(format("Error opening '%s': %s\n", arg[1], err))
+	utils.exit(1)
+end
 
 for line in file:lines() do
    n = n+1
-   write(format("%4d: %s\n", n, line))
 end
 --[=[
 --]]
-for line in io.lines('PKGBUILD') do
-   n = n+1
-   write(format("%4d: %s\n", n, line))
+for line in io.lines(arg[1]) do
+	n = n+1
 end
 --]=]
 
--- vim: syntax=lua ts=3 sw=3 et:
+write(format('%d lines\n', n))
+
+-- vim: syntax=lua ts=2 sw=2 noet:
