@@ -178,9 +178,13 @@ do
 		return setmetatable({
 			headers = {},
 			version = req.version,
-			add     = function(self, ...)
+			add     = function(self, fmt, first, ...)
 				n = n + 1
-				self[n] = format(...)
+				if first then
+					self[n] = format(fmt, first, ...)
+				else
+					self[n] = fmt
+				end
 			end
 		}, Response)
 	end

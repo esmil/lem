@@ -106,23 +106,6 @@ do
 		M.OPTIONSM = match_setter('OPTIONS')
 	end
 
-	local Response = {}
-	Response.__index = Response
-	M.Response = Response
-
-	function new_response(req)
-		local n = 0
-		return setmetatable({
-			headers = {},
-			status  = 200,
-			version = req.version,
-			add     = function(self, ...)
-				n = n + 1
-				self[n] = format(...)
-			end
-		}, Response)
-	end
-
 	local function check_match(entry, req, res, ok, ...)
 		if not ok then return false end
 		local handler = entry[req.method]
