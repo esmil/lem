@@ -374,6 +374,9 @@ file_seek(lua_State *T)
 	if (f->a.T != NULL)
 		return io_busy(T);
 
+	/* flush input buffer */
+	lem_inputbuf_init(&f->buf);
+
 	f->seek.whence = mode[op];
 	lem_async_do(&f->a, T, file_seek_work, file_seek_reap);
 
