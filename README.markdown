@@ -65,6 +65,9 @@ to happen before resuming the coroutine.
 This allows libraries to be written such that calls appear to be blocking,
 while still allowing other Lua coroutines to run. It also allows you to write
 libraries which automatically spawn new coroutines to handle incoming events.
+In the above example the autospawn method automatically spawns new coroutines
+to handle incoming connections, and the read and write methods suspends the
+the running coroutine while waiting for I/O.
 
 For this to work properly LEM modules needs to use non-blocking I/O. However,
 not all I/O can easily be done non-blocking. Filesystem operations is one example.
