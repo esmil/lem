@@ -211,9 +211,10 @@ stream__write(lua_State *T, struct stream *s)
 	int err;
 
 	while ((bytes = write(s->w.fd, s->out, s->out_len)) > 0) {
+		lem_debug("wrote %ld bytes to fd %d", bytes, s->w.fd);
 		s->out += bytes;
 		s->out_len -= bytes;
-		if (s->out_len == 0) {
+		while (s->out_len == 0) {
 			if (s->idx == lua_gettop(T)) {
 				lua_pushboolean(T, 1);
 				return 1;
@@ -222,6 +223,7 @@ stream__write(lua_State *T, struct stream *s)
 		}
 	}
 	err = errno;
+	lem_debug("wrote %ld bytes to fd %d", bytes, s->w.fd);
 
 	if (bytes < 0 && (err == EAGAIN || err == EINTR))
 		return 0;
@@ -263,14 +265,18 @@ stream_write(lua_State *T)
 	struct stream *s;
 	const char *out;
 	size_t out_len;
+	int idx;
 	int i;
 	int top;
 	int ret;
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
-	out = luaL_checklstring(T, 2, &out_len);
 	top = lua_gettop(T);
-	for (i = 3; i <= top; i++)
+	idx = 1;
+	do {
+		out = luaL_checklstring(T, ++idx, &out_len);
+	} while (out_len == 0 && idx <= top);
+	for (i = idx+1; i <= top; i++)
 		(void)luaL_checkstring(T, i);
 
 	s = lua_touserdata(T, 1);
@@ -278,10 +284,14 @@ stream_write(lua_State *T)
 		return io_closed(T);
 	if (s->w.data != NULL)
 		return io_busy(T);
+	if (idx > top) {
+		lua_pushboolean(T, 1);
+		return 1;
+	}
 
 	s->out = out;
 	s->out_len = out_len;
-	s->idx = 2;
+	s->idx = idx;
 	ret = stream__write(T, s);
 	if (ret > 0)
 		return ret;

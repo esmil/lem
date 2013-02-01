@@ -220,6 +220,7 @@ file_write_reap(struct lem_async *a)
 {
 	struct file *f = (struct file *)a;
 	lua_State *T = f->a.T;
+	int top;
 
 	if (f->ret) {
 		f->a.T = NULL;
@@ -227,14 +228,18 @@ file_write_reap(struct lem_async *a)
 		return;
 	}
 
-	if (f->write.idx == lua_gettop(T)) {
-		f->a.T = NULL;
-		lua_pushboolean(T, 1);
-		lem_queue(T, 1);
-		return;
-	}
+	top = lua_gettop(T);
+	do {
+		if (f->write.idx == top) {
+			f->a.T = NULL;
+			lua_pushboolean(T, 1);
+			lem_queue(T, 1);
+			return;
+		}
 
-	f->write.str = lua_tolstring(T, ++f->write.idx, &f->write.len);
+		f->write.str = lua_tolstring(T, ++f->write.idx, &f->write.len);
+	} while (f->write.len == 0);
+
 	lem_async_put(&f->a);
 }
 
@@ -244,13 +249,17 @@ file_write(lua_State *T)
 	struct file *f;
 	const char *str;
 	size_t len;
+	int idx;
 	int i;
 	int top;
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
-	str = luaL_checklstring(T, 2, &len);
 	top = lua_gettop(T);
-	for (i = 3; i <= top; i++)
+	idx = 1;
+	do {
+		str = luaL_checklstring(T, ++idx, &len);
+	} while (len == 0 && idx <= top);
+	for (i = idx+1; i <= top; i++)
 		(void)luaL_checkstring(T, i);
 
 	f = lua_touserdata(T, 1);
@@ -258,10 +267,14 @@ file_write(lua_State *T)
 		return io_closed(T);
 	if (f->a.T != NULL)
 		return io_busy(T);
+	if (idx > top) {
+		lua_pushboolean(T, 1);
+		return 1;
+	}
 
 	f->write.str = str;
 	f->write.len = len;
-	f->write.idx = 2;
+	f->write.idx = idx;
 	lem_async_do(&f->a, T, file_write_work, file_write_reap);
 
 	return lua_yield(T, top);
