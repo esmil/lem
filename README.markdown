@@ -5,19 +5,52 @@ A Lua Event Machine
 About
 -----
 The Lua Event Machine is an attempt to make multitasking easier.
-It makes heavy use of Lua coroutines so that code that does I/O
-can be suspended until data is ready.
-
-This allows you write code as if you're using blocking I/O, while
-still allowing code in other coroutines to run when you'd otherwise
-wait for I/O.
+It makes heavy use of Lua coroutines so code that does I/O
+can be suspended until data is ready. This allows you write code
+as if you're using blocking I/O, while still allowing code in other
+coroutines to run when you'd otherwise wait for I/O.
 
 Hovewer unlike traditional multithreading there is no need for locks since
 only one coroutine is running at a given time and you know exactly
 when control might switch to another coroutine. That is when you're
 doing I/O.
 
-A fancy word for this is co-operative multitasking.
+Here is a minimal chat server:
+```lua
+local io = require 'lem.io'
+local queue = require 'lem.io.queue'
+
+local socket = assert(io.tcp.listen('*', '5555'))
+local clients = {}
+
+socket:autospawn(function(client)
+  client:write('What is your name?\r\n')
+  local name = client:read('*l')
+  if not name then
+    client:close()
+    return
+  end
+  name = name:match('[^\r]*')
+
+  local self = queue.wrap(client)
+  clients[self] = true
+
+  while true do
+    local line = client:read('*l')
+    if not line then break end
+
+    for c, _ in pairs(clients) do
+      if c ~= self then
+        c:write(string.format('%s : %s\r\n', name, line))
+      end
+    end
+  end
+
+  clients[self] = nil
+  client:close()
+end)
+```
+Use `telnet <your ip> 5555` to connect to it.
 
 
 How It Works
