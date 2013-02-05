@@ -275,7 +275,7 @@ stream_write(lua_State *T)
 	idx = 1;
 	do {
 		out = luaL_checklstring(T, ++idx, &out_len);
-	} while (out_len == 0 && idx <= top);
+	} while (out_len == 0 && idx < top);
 	for (i = idx+1; i <= top; i++)
 		(void)luaL_checkstring(T, i);
 
@@ -284,7 +284,7 @@ stream_write(lua_State *T)
 		return io_closed(T);
 	if (s->w.data != NULL)
 		return io_busy(T);
-	if (idx > top) {
+	if (out_len == 0) {
 		lua_pushboolean(T, 1);
 		return 1;
 	}

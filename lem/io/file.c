@@ -258,7 +258,7 @@ file_write(lua_State *T)
 	idx = 1;
 	do {
 		str = luaL_checklstring(T, ++idx, &len);
-	} while (len == 0 && idx <= top);
+	} while (len == 0 && idx < top);
 	for (i = idx+1; i <= top; i++)
 		(void)luaL_checkstring(T, i);
 
@@ -267,7 +267,7 @@ file_write(lua_State *T)
 		return io_closed(T);
 	if (f->a.T != NULL)
 		return io_busy(T);
-	if (idx > top) {
+	if (len == 0) {
 		lua_pushboolean(T, 1);
 		return 1;
 	}
