@@ -1,7 +1,7 @@
 #!bin/lem
 --
 -- This file is part of LEM, a Lua Event Machine.
--- Copyright 2011-2012 Emil Renner Berthing
+-- Copyright 2013 Emil Renner Berthing
 --
 -- LEM is free software: you can redistribute it and/or modify it
 -- under the terms of the GNU Lesser General Public License as
@@ -29,35 +29,22 @@ local function printf(...)
 	return write(format(...))
 end
 
-local url = arg[1] or 'http://www.google.com/'
-local running = 0
+local url      = arg[1] or 'http://ompldr.org/vODFnOA/Birgit%20Lystager%20-%20Birger.mp3'
+local filename = arg[2] or 'birger.mp3'
+local stop     = false
 
-local function get(n, close)
-	running = running + 1
-
+utils.spawn(function()
 	local c = client.new()
 
-	local res = assert(c:get(url))
-
-	printf('\n%d: HTTP/%s %d %s\n', n, res.version, res.status, res.text)
-	for k, v in pairs(res.headers) do
-		printf('%d: %s: %s\n', n, k, v)
-	end
-
-	printf('\n%d: #body = %d\n', n, #res.body)
-
+	assert(c:download(url, filename))
 	assert(c:close())
-	running = running - 1
-end
-
-for i = 1, 2 do
-	utils.spawn(get, i, (i % 2) == 0)
-end
+	stop = true
+end)
 
 local sleeper = utils.newsleeper()
 repeat
 	write('.')
 	sleeper:sleep(0.001)
-until running == 0
+until stop
 
 -- vim: set ts=2 sw=2 noet:

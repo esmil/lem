@@ -28,6 +28,7 @@ llibs = \
 	lem/io/queue.lua \
 	lem/lfs.lua \
 	lem/http.lua \
+	lem/http/client.lua \
 	lem/http/server.lua \
 	lem/queue.lua \
 	lem/hathaway.lua 
