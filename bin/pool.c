@@ -85,7 +85,7 @@ out:
 }
 
 static void
-pool_cb(EV_A_ struct ev_async *w, int revents)
+pool_cb(EV_P_ struct ev_async *w, int revents)
 {
 	struct lem_async *a;
 	struct lem_async *next;
@@ -104,7 +104,7 @@ pool_cb(EV_A_ struct ev_async *w, int revents)
 	}
 
 	if (pool_jobs == 0)
-		ev_async_stop(LEM_ w);
+		ev_async_stop(EV_A_ w);
 }
 
 static int

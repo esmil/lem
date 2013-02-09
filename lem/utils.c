@@ -181,7 +181,7 @@ utils_resume(lua_State *T)
 static int
 utils_now(lua_State *T)
 {
-	lua_pushnumber(T, (lua_Number)ev_now());
+	lua_pushnumber(T, (lua_Number)ev_now(LEM));
 	return 1;
 }
 
@@ -189,7 +189,7 @@ static int
 utils_updatenow(lua_State *T)
 {
 	ev_now_update(LEM);
-	lua_pushnumber(T, (lua_Number)ev_now());
+	lua_pushnumber(T, (lua_Number)ev_now(LEM));
 	return 1;
 }
 

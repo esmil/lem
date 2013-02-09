@@ -386,8 +386,12 @@ main(int argc, char *argv[])
 	/* free runqueue */
 	free(rq.queue);
 
-	/* close default loop */
+	/* destroy loop */
+#if EV_MULTIPLICITY
+	ev_loop_destroy(lem_loop);
+#else
 	ev_default_destroy();
+#endif
 	lem_debug("Bye %s", exit_status == EXIT_SUCCESS ? "o/" : ":(");
 	return exit_status;
 
@@ -396,6 +400,10 @@ error:
 		lua_close(L);
 	if (rq.queue)
 		free(rq.queue);
+#if EV_MULTIPLICITY
+	ev_loop_destroy(lem_loop);
+#else
 	ev_default_destroy();
+#endif
 	return EXIT_FAILURE;
 }
