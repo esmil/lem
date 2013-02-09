@@ -29,7 +29,8 @@ llibs = \
 	lem/lfs.lua \
 	lem/http.lua \
 	lem/http/server.lua \
-	lem/hathaway.lua
+	lem/queue.lua \
+	lem/hathaway.lua 
 
 clibs = \
 	lem/utils.so \
