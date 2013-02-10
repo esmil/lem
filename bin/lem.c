@@ -56,10 +56,10 @@ struct lem_runqueue_slot {
 
 struct lem_runqueue {
 	struct ev_idle w;
-	unsigned long first;
-	unsigned long last;
-	unsigned long mask;
 	struct lem_runqueue_slot *queue;
+	unsigned int first;
+	unsigned int last;
+	unsigned int mask;
 };
 
 #if EV_MULTIPLICITY
@@ -166,11 +166,11 @@ lem_queue(lua_State *T, int nargs)
 	rq.last++;
 	rq.last &= rq.mask;
 	if (rq.first == rq.last) {
-		unsigned long i;
-		unsigned long j;
+		unsigned int i;
+		unsigned int j;
 		struct lem_runqueue_slot *new_queue;
 
-		lem_debug("expanding queue to %lu slots", 2*(rq.mask + 1));
+		lem_debug("expanding queue to %u slots", 2*(rq.mask + 1));
 		new_queue = lem_xmalloc(2*(rq.mask + 1)
 				* sizeof(struct lem_runqueue_slot));
 
