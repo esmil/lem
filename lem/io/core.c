@@ -269,11 +269,11 @@ io_popen(lua_State *T)
 	int fd[2];
 	int err;
 
-	posix_spawn_file_actions_init(&fa);
 	switch (mode) {
 	case 0: /* "r" */
 		if (pipe(fd))
 			return io_strerror(T, errno);
+		posix_spawn_file_actions_init(&fa);
 		posix_spawn_file_actions_adddup2(&fa, fd[1], 1);
 		posix_spawn_file_actions_addclose(&fa, fd[1]);
 		break;
@@ -283,12 +283,14 @@ io_popen(lua_State *T)
 		err = fd[0];
 		fd[0] = fd[1];
 		fd[1] = err;
+		posix_spawn_file_actions_init(&fa);
 		posix_spawn_file_actions_adddup2(&fa, fd[1], 0);
 		posix_spawn_file_actions_addclose(&fa, fd[1]);
 		break;
 	case 2: /* "rw" */
 		if (socketpair(AF_UNIX, SOCK_STREAM, 0, fd))
 			return io_strerror(T, errno);
+		posix_spawn_file_actions_init(&fa);
 		posix_spawn_file_actions_adddup2(&fa, fd[1], 0);
 		posix_spawn_file_actions_adddup2(&fa, fd[1], 1);
 		posix_spawn_file_actions_addclose(&fa, fd[1]);
