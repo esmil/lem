@@ -35,9 +35,9 @@
 #define EV_PREPARE_ENABLE 0
 #define EV_CHECK_ENABLE 0
 #define EV_FORK_ENABLE 0
-#define EV_SIGNAL_ENABLE 0
+#define EV_SIGNAL_ENABLE 1
 #define EV_ASYNC_ENABLE 1
-#define EV_CHILD_ENABLE 0
+#define EV_CHILD_ENABLE 1
 
 #define EV_MINPRI 0
 #define EV_MAXPRI 0

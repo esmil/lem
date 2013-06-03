@@ -94,21 +94,17 @@ lem_xmalloc(size_t size)
 }
 
 static int
-ignore_sigpipe(void)
+setsignal(int signal, void (*handler)(int), int flags)
 {
 	struct sigaction act;
 
-	if (sigaction(SIGPIPE, NULL, &act)) {
-		lem_log_error("lem: error getting signal action: %s",
-		              strerror(errno));
-		return -1;
-	}
+	act.sa_handler = handler;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = flags;
 
-	act.sa_handler = SIG_IGN;
-
-	if (sigaction(SIGPIPE, &act, NULL)) {
-		lem_log_error("lem: error setting signal action: %s",
-		              strerror(errno));
+	if (sigaction(signal, &act, NULL)) {
+		lem_log_error("lem: error setting signal %d: %s",
+		              signal, strerror(errno));
 		return -1;
 	}
 
@@ -340,7 +336,11 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (ignore_sigpipe())
+	if (setsignal(SIGPIPE, SIG_IGN, 0)
+#if !EV_CHILD_ENABLE
+	    || setsignal(SIGCHLD, SIG_DFL, SA_NOCLDSTOP | SA_NOCLDWAIT)
+#endif
+	   )
 		goto error;
 
 	/* create main Lua state */
