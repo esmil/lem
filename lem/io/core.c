@@ -267,6 +267,7 @@ io_popen(lua_State *T)
 	char *const argv[4] = { "/bin/sh", "-c", (char *)cmd, NULL };
 	posix_spawn_file_actions_t fa;
 	int fd[2];
+	pid_t pid;
 	int err;
 
 	switch (mode) {
@@ -304,7 +305,7 @@ io_popen(lua_State *T)
 		goto error;
 	}
 
-	err = posix_spawn(NULL, argv[0], &fa, NULL, argv, environ);
+	err = posix_spawn(&pid, argv[0], &fa, NULL, argv, environ);
 	lem_debug("err = %d, %s", err, strerror(err));
 	if (err)
 		goto error;
@@ -312,7 +313,8 @@ io_popen(lua_State *T)
 	posix_spawn_file_actions_destroy(&fa);
 	close(fd[1]);
 	stream_new(T, fd[0], lua_upvalueindex(1));
-	return 1;
+	lua_pushnumber(T, pid);
+	return 2;
 error:
 	posix_spawn_file_actions_destroy(&fa);
 	close(fd[0]);
