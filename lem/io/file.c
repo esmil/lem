@@ -45,6 +45,11 @@ struct file {
 	struct lem_inputbuf buf;
 };
 
+struct file_gc {
+	struct lem_async a;
+	int fd;
+};
+
 static struct file *
 file_new(lua_State *T, int fd, int mt)
 {
@@ -63,14 +68,38 @@ file_new(lua_State *T, int fd, int mt)
 	return f;
 }
 
+/*
+ * file:__gc() metamethod
+ */
+static void
+file_gc_work(struct lem_async *a)
+{
+	struct file_gc *gc = (struct file_gc *)a;
+
+	close(gc->fd);
+}
+
+static void
+file_gc_reap(struct lem_async *a)
+{
+	struct file_gc *gc = (struct file_gc *)a;
+
+	free(gc);
+}
+
 static int
 file_gc(lua_State *T)
 {
 	struct file *f = lua_touserdata(T, 1);
 
 	lem_debug("collecting %p, fd = %d", f, f->fd);
-	if (f->fd >= 0)
-		(void)close(f->fd);
+	if (f->fd >= 0) {
+		struct file_gc *gc = lem_xmalloc(sizeof(struct file_gc));
+
+		gc->fd = f->fd;
+		f->fd = -1;
+		lem_async_do(&gc->a, NULL, file_gc_work, file_gc_reap);
+	}
 
 	return 0;
 }
@@ -86,11 +115,41 @@ file_closed(lua_State *T)
 	return 1;
 }
 
+/*
+ * file:close() method
+ */
+static void
+file_close_work(struct lem_async *a)
+{
+	struct file *f = (struct file *)a;
+
+	if (close(f->fd))
+		f->ret = errno;
+	else
+		f->ret = 0;
+}
+
+static void
+file_close_reap(struct lem_async *a)
+{
+	struct file *f = (struct file *)a;
+	lua_State *T = f->a.T;
+
+	f->a.T = NULL;
+	f->fd = -1;
+	if (f->ret) {
+		lem_queue(T, io_strerror(T, f->ret));
+		return;
+	}
+
+	lua_pushboolean(T, 1);
+	lem_queue(T, 1);
+}
+
 static int
 file_close(lua_State *T)
 {
 	struct file *f;
-	int ret;
 
 	luaL_checktype(T, 1, LUA_TUSERDATA);
 	f = lua_touserdata(T, 1);
@@ -99,14 +158,9 @@ file_close(lua_State *T)
 	if (f->a.T != NULL)
 		return io_busy(T);
 
-	lem_debug("collecting %d", f->fd);
-	ret = close(f->fd);
-	f->fd = -1;
-	if (ret)
-		return io_strerror(T, errno);
-
-	lua_pushboolean(T, 1);
-	return 1;
+	lem_async_do(&f->a, T, file_close_work, file_close_reap);
+	lua_settop(T, 1);
+	return lua_yield(T, 1);
 }
 
 /*
