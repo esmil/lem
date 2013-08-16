@@ -56,8 +56,18 @@ all: bin/lem lem.pc $(clibs)
 debug: bin/lem lem.pc $(clibs)
 
 bin/libev.o: CFLAGS += -w
+include/lem.h: lua/luaconf.h
 bin/lua.o: lua/luaconf.h
+bin/lem.o: include/lem.h bin/pool.c
 bin/lem.o: CFLAGS += -D'LEM_LDIR="$(lmoddir)/"'
+lem/io/core.so: include/lem-parsers.h \
+	lem/io/file.c \
+	lem/io/stream.c \
+	lem/io/server.c \
+	lem/io/unix.c \
+	lem/io/tcp.c
+lem/parsers/core.so: include/lem-parsers.h
+lem/http/core.so: include/lem-parsers.h
 
 %.o: %.c
 	$E '  CC    $@'
@@ -67,9 +77,9 @@ bin/lem: $(objects)
 	$E '  LD    $@'
 	$Q$(CC) $^ -o $@ -rdynamic $(LDFLAGS) $(LIBS)
 
-%.so: %.c
+%.so: %.c include/lem.h
 	$E '  CCLD  $@'
-	$Q$(CC) $(CFLAGS) -fPIC -nostartfiles $(SHARED) $^ -o $@ $(LDFLAGS)
+	$Q$(CC) $(CFLAGS) -fPIC -nostartfiles $(SHARED) $< -o $@ $(LDFLAGS)
 
 lua/luaconf.h: lua/luaconf.h.in
 	$E '  SED > $@'
