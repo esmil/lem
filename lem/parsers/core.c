@@ -24,10 +24,10 @@
 static int
 parse_available_process(lua_State *T, struct lem_inputbuf *b)
 {
-	size_t size = b->end - b->start;
+	unsigned int size = b->end - b->start;
 
 	if (size == 0)
-		return LEM_PMORE;
+		return 0;
 
 	lua_pushlstring(T, b->buf + b->start, size);
 	b->start = b->end = 0;
@@ -41,24 +41,31 @@ static const struct lem_parser parser_available = {
 /*
  * read a specified number of bytes
  */
+struct parse_target_state {
+	size_t target;
+	int parts;
+};
+
 static void
 parse_target_init(lua_State *T, struct lem_inputbuf *b)
 {
-	b->u = luaL_checknumber(T, 3);
-	b->parts = 0;
+	struct parse_target_state *s = (struct parse_target_state *)&b->pstate;
+
+	s->target = luaL_checknumber(T, 3);
+	s->parts = 0;
 	lua_settop(T, 2);
 }
 
 static int
 parse_target_process(lua_State *T, struct lem_inputbuf *b)
 {
-	unsigned long target = b->u;
-	unsigned int size = b->end - b->start;
+	struct parse_target_state *s = (struct parse_target_state *)&b->pstate;
+	size_t size = b->end - b->start;
 
-	if ((unsigned long)size >= target) {
-		lua_pushlstring(T, b->buf + b->start, target);
-		lua_concat(T, b->parts + 1);
-		b->start += target;
+	if (size >= s->target) {
+		lua_pushlstring(T, b->buf + b->start, s->target);
+		lua_concat(T, s->parts + 1);
+		b->start += s->target;
 		if (b->start == b->end)
 			b->start = b->end = 0;
 
@@ -67,16 +74,16 @@ parse_target_process(lua_State *T, struct lem_inputbuf *b)
 
 	if (b->end == LEM_INPUTBUF_SIZE) {
 		lua_pushlstring(T, b->buf + b->start, size);
-		b->parts++;
-		if (b->parts == LUA_MINSTACK-2) {
+		s->parts++;
+		if (s->parts == LUA_MINSTACK-2) {
 			lua_concat(T, LUA_MINSTACK-2);
-			b->parts = 1;
+			s->parts = 1;
 		}
 		b->start = b->end = 0;
-		b->u = target - size;
+		s->target -= size;
 	}
 
-	return LEM_PMORE;
+	return 0;
 }
 
 static const struct lem_parser parser_target = {
@@ -87,46 +94,55 @@ static const struct lem_parser parser_target = {
 /*
  * read all data until stream closes
  */
+struct parse_all_state {
+	int parts;
+};
+
 static void
 parse_all_init(lua_State *T, struct lem_inputbuf *b)
 {
-	b->parts = 0;
+	struct parse_all_state *s = (struct parse_all_state *)&b->pstate;
+
+	s->parts = 0;
 	lua_settop(T, 2);
 }
 
 static int
 parse_all_process(lua_State *T, struct lem_inputbuf *b)
 {
+	struct parse_all_state *s = (struct parse_all_state *)&b->pstate;
+
 	if (b->end == LEM_INPUTBUF_SIZE) {
 		lua_pushlstring(T, b->buf + b->start,
 				LEM_INPUTBUF_SIZE - b->start);
-		b->parts++;
-		if (b->parts == LUA_MINSTACK-2) {
+		s->parts++;
+		if (s->parts == LUA_MINSTACK-2) {
 			lua_concat(T, LUA_MINSTACK-2);
-			b->parts = 1;
+			s->parts = 1;
 		}
 		b->start = b->end = 0;
 	}
 
-	return LEM_PMORE;
+	return 0;
 }
 
 static int
 parse_all_destroy(lua_State *T, struct lem_inputbuf *b, enum lem_preason reason)
 {
+	struct parse_all_state *s = (struct parse_all_state *)&b->pstate;
 	unsigned int size;
 
 	if (reason != LEM_PCLOSED)
-		return LEM_PMORE;
+		return 0;
 
 	size = b->end - b->start;
 	if (size > 0) {
 		lua_pushlstring(T, b->buf + b->start, size);
-		b->parts++;
-		b->start = b->end = 0;
+		s->parts++;
 	}
+	b->start = b->end = 0;
 
-	lua_concat(T, b->parts);
+	lua_concat(T, s->parts);
 	return 1;
 }
 
@@ -139,26 +155,32 @@ static const struct lem_parser parser_all = {
 /*
  * read a line
  */
+struct parse_line_state {
+	int parts;
+	char stopbyte;
+};
+
 static void
 parse_line_init(lua_State *T, struct lem_inputbuf *b)
 {
+	struct parse_line_state *s = (struct parse_line_state *)&b->pstate;
 	const char *stopbyte = luaL_optstring(T, 3, "\n");
 
-	b->u = (b->start << 8) | stopbyte[0];
-	b->parts = 0;
+	s->parts = 0;
+	s->stopbyte = stopbyte[0];
 	lua_settop(T, 2);
 }
 
 static int
 parse_line_process(lua_State *T, struct lem_inputbuf *b)
 {
+	struct parse_line_state *s = (struct parse_line_state *)&b->pstate;
 	unsigned int i;
-	unsigned char stopbyte = b->u & 0xFF;
 
-	for (i = b->u >> 8; i < b->end; i++) {
-		if (b->buf[i] == stopbyte) {
+	for (i = b->start; i < b->end; i++) {
+		if (b->buf[i] == s->stopbyte) {
 			lua_pushlstring(T, b->buf + b->start, i - b->start);
-			lua_concat(T, b->parts + 1);
+			lua_concat(T, s->parts + 1);
 			i++;
 			if (i == b->end)
 				b->start = b->end = 0;
@@ -169,18 +191,17 @@ parse_line_process(lua_State *T, struct lem_inputbuf *b)
 	}
 
 	if (b->end == LEM_INPUTBUF_SIZE) {
-		lua_pushlstring(T, b->buf + b->start, b->end - b->start);
-		b->parts++;
-		if (b->parts == LUA_MINSTACK-2) {
+		lua_pushlstring(T, b->buf + b->start,
+				LEM_INPUTBUF_SIZE - b->start);
+		s->parts++;
+		if (s->parts == LUA_MINSTACK-2) {
 			lua_concat(T, LUA_MINSTACK-2);
-			b->parts = 1;
+			s->parts = 1;
 		}
 		b->start = b->end = 0;
-		b->u = stopbyte;
-	} else
-		b->u = (i << 8) | stopbyte;
+	}
 
-	return LEM_PMORE;
+	return 0;
 }
 
 static const struct lem_parser parser_line = {

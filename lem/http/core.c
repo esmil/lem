@@ -153,6 +153,11 @@ static const unsigned char state_table[SMAX][C_MAX] = {
 /* SEND*/ { X___,XEND,X___,X___,X___,X___,X___,X___,X___,X___,X___,X___,X___ },
 };
 
+struct parse_http_state {
+	unsigned int w;
+	unsigned char state;
+};
+
 static void
 parse_http_init(lua_State *T)
 {
@@ -164,26 +169,32 @@ parse_http_init(lua_State *T)
 static void
 parse_http_req_init(lua_State *T, struct lem_inputbuf *b)
 {
-	b->u = S_GO;
+	struct parse_http_state *s = (struct parse_http_state *)&b->pstate;
+
+	s->w = 0;
+	s->state = S_GO;
 	parse_http_init(T);
 }
 
 static void
 parse_http_res_init(lua_State *T, struct lem_inputbuf *b)
 {
-	b->u = C_GO;
+	struct parse_http_state *s = (struct parse_http_state *)&b->pstate;
+
+	s->w = 0;
+	s->state = C_GO;
 	parse_http_init(T);
 }
 
 static int
 parse_http_process(lua_State *T, struct lem_inputbuf *b)
 {
-	unsigned char state = b->u & 0xFF;
-	unsigned int w = b->u >> 8;
+	struct parse_http_state *s = (struct parse_http_state *)&b->pstate;
+	unsigned int w = s->w;
 	unsigned int r = b->start;
-	unsigned int end = b->end;
+	unsigned char state = s->state;
 
-	while (r < end) {
+	while (r < b->end) {
 		unsigned char ch = b->buf[r++];
 
 		state = state_table[state][ch > 127 ? C_ETC : ascii_class[ch]];
@@ -296,7 +307,7 @@ parse_http_process(lua_State *T, struct lem_inputbuf *b)
 			}
 			lua_setfield(T, -2, "headers");
 
-			if (r == end)
+			if (r == b->end)
 				b->start = b->end = 0;
 			else
 				b->start = r;
@@ -313,8 +324,9 @@ parse_http_process(lua_State *T, struct lem_inputbuf *b)
 	}
 
 	b->start = b->end = w + 1;
-	b->u = (w << 8) | state;
-	return LEM_PMORE;
+	s->w = w;
+	s->state = state;
+	return 0;
 }
 
 static const struct lem_parser http_req_parser = {

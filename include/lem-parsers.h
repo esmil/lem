@@ -21,21 +21,14 @@
 
 #include <lem.h>
 
+#define LEM_INPUTBUF_PSIZE (4*sizeof(size_t))
 #define LEM_INPUTBUF_SIZE 4096
 
 struct lem_inputbuf {
 	unsigned int start;
 	unsigned int end;
-	union {
-		void *p;
-		unsigned long u;
-	};
-	int parts;
+	char pstate[LEM_INPUTBUF_PSIZE];
 	char buf[LEM_INPUTBUF_SIZE];
-};
-
-enum lem_presult {
-	LEM_PMORE = 0,
 };
 
 enum lem_preason {
