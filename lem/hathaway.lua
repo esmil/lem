@@ -20,6 +20,7 @@
 local format = string.format
 
 local httpserv = require 'lem.http.server'
+local httpresp = require 'lem.http.response'
 
 local M = {}
 
@@ -112,7 +113,7 @@ do
 		if handler then
 			handler(req, res, ok, ...)
 		else
-			httpserv.method_not_allowed(req, res)
+			httpresp.method_not_allowed(req, res)
 		end
 		return true
 	end
@@ -126,7 +127,7 @@ do
 			if handler then
 				handler(req, res)
 			else
-				httpserv.method_not_allowed(req, res)
+				httpresp.method_not_allowed(req, res)
 			end
 		else
 			local i = 0
@@ -134,7 +135,7 @@ do
 				i = i + 1
 				local entry = lookup[i]
 				if not entry then
-					httpserv.not_found(req, res)
+					httpresp.not_found(req, res)
 					break
 				end
 			until check_match(entry, req, res, path:match(entry[1]))
