@@ -257,19 +257,8 @@ tcp_listen_reap(struct lem_async *a)
 		g->node = "*";
 
 	if (sock >= 0) {
-		struct ev_io *w;
-
 		free(g);
-
-		/* create userdata and set the metatable */
-		w = lua_newuserdata(T, sizeof(struct ev_io));
-		lua_pushvalue(T, 3);
-		lua_setmetatable(T, -2);
-
-		/* initialize userdata */
-		ev_io_init(w, NULL, sock, EV_READ);
-		w->data = NULL;
-
+		server_new(T, sock, 3);
 		lem_queue(T, 1);
 		return;
 	}

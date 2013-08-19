@@ -16,6 +16,21 @@
  * License along with LEM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+static struct ev_io *
+server_new(lua_State *T, int fd, int mt)
+{
+	/* create userdata and set the metatable */
+	struct ev_io *w = lua_newuserdata(T, sizeof(struct ev_io));
+	lua_pushvalue(T, mt);
+	lua_setmetatable(T, -2);
+
+	/* initialize userdata */
+	ev_io_init(w, NULL, fd, EV_READ);
+	w->data = NULL;
+
+	return w;
+}
+
 static int
 server_closed(lua_State *T)
 {

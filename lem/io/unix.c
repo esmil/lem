@@ -134,8 +134,7 @@ unix_listen_work(struct lem_async *a)
 			SOCK_CLOEXEC |
 #endif
 			SOCK_STREAM, 0);
-	if (sock < 0
-			) {
+	if (sock < 0) {
 		u->sock = -1;
 		u->err = errno;
 		return;
@@ -191,19 +190,8 @@ unix_listen_reap(struct lem_async *a)
 	int sock = u->sock;
 
 	if (sock >= 0) {
-		struct ev_io *w;
-
 		free(u);
-
-		/* create userdata and set the metatable */
-		w = lua_newuserdata(T, sizeof(struct ev_io));
-		lua_pushvalue(T, 2);
-		lua_setmetatable(T, -2);
-
-		/* initialize userdata */
-		ev_io_init(w, NULL, sock, EV_READ);
-		w->data = NULL;
-
+		server_new(T, sock, 2);
 		lem_queue(T, 1);
 		return;
 	}
