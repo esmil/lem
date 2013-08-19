@@ -130,7 +130,7 @@ io_open_work(struct lem_async *a)
 #ifdef O_CLOEXEC
 			| O_CLOEXEC
 #endif
-			| O_NONBLOCK, o->fd >= 0 ? o->fd :
+			, o->fd >= 0 ? o->fd :
 			S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 	if (fd < 0) {
 		o->flags = -errno;
@@ -157,6 +157,10 @@ io_open_work(struct lem_async *a)
 	case S_IFCHR:
 	case S_IFIFO:
 		o->flags = 1;
+		if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1) {
+			o->flags = -errno;
+			close(fd);
+		}
 		break;
 
 	default:
