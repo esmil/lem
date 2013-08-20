@@ -2,6 +2,7 @@
 --
 -- This file is part of LEM, a Lua Event Machine.
 -- Copyright 2011-2012 Emil Renner Berthing
+-- Copyright 2013 Asbjørn Sloth Tønnesen
 --
 -- LEM is free software: you can redistribute it and/or modify it
 -- under the terms of the GNU Lesser General Public License as
@@ -23,7 +24,9 @@ package.cpath = '?.so'
 local utils    = require 'lem.utils'
 local io       = require 'lem.io'
 local hathaway = require 'lem.hathaway'
-hathaway.import()
+
+hathaway.debug = print -- must be set before import()
+hathaway.import()      -- when using single instance API
 
 GET('/', function(req, res)
 	print(req.client:getpeer())
@@ -146,7 +149,6 @@ GETM('^/hello/([^/]+)$', function(req, res, name)
 	res:add('Hello, %s!\n', name)
 end)
 
-hathaway.debug = print
 if arg[1] == 'socket' then
 	local sock = assert(io.unix.listen('socket', 666))
 	Hathaway(sock)
