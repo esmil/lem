@@ -26,11 +26,12 @@ local M = {}
 
 function M.debug() end
 
-local lookup = {}
-M.lookup = lookup
+local Hathaway = {}
+Hathaway.__index = Hathaway
+M.Hathaway = Hathaway
 
-function M.GET(path, handler)
-	local entry = lookup[path]
+function Hathaway:GET(path, handler)
+	local entry = self.lookup[path]
 	if entry then
 		entry['HEAD'] = handler
 		entry['GET'] = handler
@@ -39,34 +40,34 @@ function M.GET(path, handler)
 			['HEAD'] = handler,
 			['GET'] = handler,
 		}
-		lookup[path] = entry
+		self.lookup[path] = entry
 	end
 end
 
 do
 	local function static_setter(method)
-		return function(path, handler)
-			local entry = lookup[path]
+		return function(self, path, handler)
+			local entry = self.lookup[path]
 			if entry then
 				entry[method] = handler
 			else
-				lookup[path] = { [method] = handler }
+				self.lookup[path] = { [method] = handler }
 			end
 		end
 	end
 
-	M.POST    = static_setter('POST')
-	M.PUT     = static_setter('PUT')
-	M.DELETE  = static_setter('DELETE')
-	M.OPTIONS = static_setter('OPTIONS')
+	Hathaway.POST    = static_setter('POST')
+	Hathaway.PUT     = static_setter('PUT')
+	Hathaway.DELETE  = static_setter('DELETE')
+	Hathaway.OPTIONS = static_setter('OPTIONS')
 end
 
-function M.GETM(pattern, handler)
+function Hathaway:GETM(pattern, handler)
 	local i = 1
 	while true do
-		local entry = lookup[i]
+		local entry = self.lookup[i]
 		if entry == nil then
-			lookup[i] = { pattern,
+			self.lookup[i] = { pattern,
 				['GET'] = handler,
 				['HEAD'] = handler
 			}
@@ -83,12 +84,12 @@ end
 
 do
 	local function match_setter(method)
-		return function(pattern, handler)
+		return function(self, pattern, handler)
 			local i = 1
 			while true do
-				local entry = lookup[i]
+				local entry = self.lookup[i]
 				if entry == nil then
-					lookup[i] = { pattern, [method] = handler }
+					self.lookup[i] = { pattern, [method] = handler }
 					break
 				end
 				if entry[1] == pattern then
@@ -100,10 +101,10 @@ do
 		end
 	end
 
-	M.POSTM    = match_setter('POST')
-	M.PUTM     = match_setter('PUT')
-	M.DELETEM  = match_setter('DELETE')
-	M.OPTIONSM = match_setter('OPTIONS')
+	Hathaway.POSTM    = match_setter('POST')
+	Hathaway.PUTM     = match_setter('PUT')
+	Hathaway.DELETEM  = match_setter('DELETE')
+	Hathaway.OPTIONSM = match_setter('OPTIONS')
 end
 
 local function check_match(entry, req, res, ok, ...)
@@ -117,9 +118,10 @@ local function check_match(entry, req, res, ok, ...)
 	return true
 end
 
-local function handler(req, res)
+local function handle(self, req, res)
 	local method, path = req.method, req.path
-	M.debug('info', format("%s %s HTTP/%s", method, req.uri, req.version))
+	self.debug('info', format("%s %s HTTP/%s", method, req.uri, req.version))
+	local lookup = self.lookup
 	local entry = lookup[path]
 	if entry then
 		local handler = entry[method]
@@ -140,43 +142,58 @@ local function handler(req, res)
 		until check_match(entry, req, res, path:match(entry[1]))
 	end
 end
+Hathaway.handle = handle
 
-function M.Hathaway(host, port)
+function Hathaway:run(host, port)
 	local server, err
 	if port then
-		server, err = httpserv.new(host, port, handler)
+		server, err = httpserv.new(host, port, self.handler)
 	else
-		server, err = httpserv.new(host, handler)
+		server, err = httpserv.new(host, self.handler)
 	end
-	if not server then M.debug('new', err) return nil, err end
+	if not server then self.debug('new', err) return nil, err end
 
-	M.server = server
-	server.debug = M.debug
+	self.server = server
+	server.debug = self.debug
 
 	local ok, err = server:run()
 	if not ok and err ~= 'interrupted' then
-		M.debug('run', err)
+		self.debug('run', err)
 		return nil, err
 	end
 	return true
 end
 
-function M.import(env)
+function Hathaway:import(env)
 	if not env then
 		env = _G
 	end
 
-	env.GET      = M.GET
-	env.POST     = M.POST
-	env.PUT      = M.PUT
-	env.DELETE   = M.DELETE
-	env.OPTIONS  = M.OPTIONS
-	env.GETM     = M.GETM
-	env.POSTM    = M.POSTM
-	env.PUTM     = M.PUTM
-	env.DELETEM  = M.DELETEM
-	env.OPTIONSM = M.OPTIONSM
-	env.Hathaway = M.Hathaway
+	env.GET      = function(...) self:GET(...) end
+	env.POST     = function(...) self:POST(...) end
+	env.PUT      = function(...) self:PUT(...) end
+	env.DELETE   = function(...) self:DELETE(...) end
+	env.OPTIONS  = function(...) self:OPTIONS(...) end
+	env.GETM     = function(...) self:GETM(...) end
+	env.POSTM    = function(...) self:POSTM(...) end
+	env.PUTM     = function(...) self:PUTM(...) end
+	env.DELETEM  = function(...) self:DELETEM(...) end
+	env.OPTIONSM = function(...) self:OPTIONSM(...) end
+	env.Hathaway = function(...) self:run(...) end
+end
+
+local function new()
+	local self = {
+		lookup = {},
+		debug = M.debug
+	}
+	self.handler = function(...) return handle(self, ...) end
+	return setmetatable(self, Hathaway)
+end
+M.new = new
+
+function M.import(...)
+	return new():import(...)
 end
 
 return M
