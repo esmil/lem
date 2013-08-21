@@ -35,6 +35,29 @@ local M = {}
 
 function M.debug() end
 
+local Request = {}
+Request.__index = Request
+M.Request = Request
+
+function Request:body()
+	local len, body = self.headers['content-length'], ''
+	if not len then return body end
+
+	len = tonumber(len)
+	if len <= 0 then return body end
+
+	if self.headers['expect'] == '100-continue' then
+		local ok, err = self.client:write('HTTP/1.1 100 Continue\r\n\r\n')
+		if not ok then return nil, err end
+	end
+
+	local err
+	body, err = self.client:read(len)
+	if not body then return nil, err end
+
+	return body
+end
+
 do
 	local gsub, char, tonumber = string.gsub, string.char, tonumber
 
@@ -67,6 +90,8 @@ local function handleHTTP(self, client)
 		if not req then self.debug('read', err) break end
 		local method, uri, version = req.method, req.uri, req.version
 
+		setmetatable(req, Request)
+		req.client = client
 		req.path = urldecode(uri:match('^([^?]*)'))
 
 		local res = newresponse(req)

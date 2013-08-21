@@ -16,16 +16,80 @@
 -- License along with LEM.  If not, see <http://www.gnu.org/licenses/>.
 --
 
+local setmetatable = setmetatable
+local tonumber = tonumber
+local concat = table.concat
+
 local io    = require 'lem.io'
 require 'lem.http'
 
-local client = {}
+local M = {}
+
+local Response = {}
+Response.__index = Response
+M.Response = Response
+
+function Response:body_chunked()
+	if self._body then return self._body end
+
+	local conn = self.conn
+	local rope, i = {}, 0
+	local line, err
+	while true do
+		line, err = conn:read('*l')
+		if not line then return nil, err end
+
+		local len = tonumber(line, 16)
+		if not len then return nil, 'expectation failed' end
+		if len == 0 then break end
+
+		local data, err = conn:read(len)
+		if not data then return nil, err end
+
+		i = i + 1
+		rope[i] = data
+
+		line, err = conn:read('*l')
+		if not line then return nil, err end
+	end
+
+	line, err = conn:read('*l')
+	if not line then return nil, err end
+
+	rope = concat(rope)
+	self._body = rope
+	return rope
+end
+
+function Response:body()
+	if self._body then return self._body end
+	if self.headers['transfer-encoding'] == 'chunked' then
+		return self:body_chunked()
+	end
+
+	local len, body, err = self.headers['content-length']
+	if len then
+		len = tonumber(len)
+		if not len then return nil, 'invalid content length' end
+		body, err = self.conn:read(len)
+	else
+		if self.headers['connection'] == 'close' then
+			body, err = self.client:read('*a')
+		else
+			return nil, 'no content length specified'
+		end
+	end
+	if not body then return nil, err end
+
+	self._body = body
+	return body
+end
 
 local Client = {}
 Client.__index = Client
-client.Client = Client
+M.Client = Client
 
-function client.new()
+function M.new()
 	return setmetatable({
 		proto = false,
 		domain = false,
@@ -95,14 +159,12 @@ function Client:get(url)
 		if not res then return fail(self, err) end
 	end
 
-	local body
-	body, err = res:body()
-	if not body then return fail(self, err) end
+	res.conn = c
+	setmetatable(res, Response)
 
 	self.proto = proto
 	self.domain = domain
 	self.conn = c
-	res.body = body
 	return res
 end
 
@@ -123,6 +185,6 @@ function Client:download(url, filename)
 	return true
 end
 
-return client
+return M
 
 -- vim: set ts=2 sw=2 noet:

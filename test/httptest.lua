@@ -44,7 +44,8 @@ local function get(n, close)
 		printf('%d: %s: %s\n', n, k, v)
 	end
 
-	printf('\n%d: #body = %d\n', n, #res.body)
+	local body = assert(res:body())
+	printf('\n%d: #body = %d\n', n, #body)
 
 	assert(c:close())
 	running = running - 1

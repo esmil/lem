@@ -18,11 +18,6 @@
 
 #include <lem-parsers.h>
 
-#if !(LUA_VERSION_NUM >= 502)
-#define lua_getuservalue lua_getfenv
-#define lua_setuservalue lua_setfenv
-#endif
-
 enum classes {
 	C_CTL,   /* control characters */
 	C_LF,    /* \n */
@@ -164,8 +159,6 @@ parse_http_init(lua_State *T)
 	/* create result table */
 	lua_settop(T, 2);
 	lua_createtable(T, 0, 5);
-	lua_pushvalue(T, 1);
-	lua_setfield(T, -2, "client");
 }
 
 static void
@@ -303,10 +296,6 @@ parse_http_process(lua_State *T, struct lem_inputbuf *b)
 			}
 			lua_setfield(T, -2, "headers");
 
-			/* set metatable */
-			lua_getuservalue(T, 2);
-			lua_setmetatable(T, -2);
-
 			if (r == end)
 				b->start = b->end = 0;
 			else
@@ -328,42 +317,25 @@ parse_http_process(lua_State *T, struct lem_inputbuf *b)
 	return LEM_PMORE;
 }
 
+static const struct lem_parser http_req_parser = {
+	.init = parse_http_req_init,
+	.process = parse_http_process,
+};
+
+static const struct lem_parser http_res_parser = {
+	.init = parse_http_res_init,
+	.process = parse_http_process,
+};
+
 int
 luaopen_lem_http_core(lua_State *L)
 {
-	struct lem_parser *p;
-
 	/* create module table M */
 	lua_newtable(L);
 
-	/* create Request metatable */
-	lua_newtable(L);
-	lua_pushvalue(L, -1);
-	lua_setfield(L, -2, "__index");
-	/* insert Request metatable */
-	lua_setfield(L, -2, "Request");
-
-	/* create Response metatable */
-	lua_newtable(L);
-	lua_pushvalue(L, -1);
-	lua_setfield(L, -2, "__index");
-	/* insert Request metatable */
-	lua_setfield(L, -2, "Response");
-
-	p = lua_newuserdata(L, sizeof(struct lem_parser));
-	p->init = parse_http_req_init;
-	p->process = parse_http_process;
-	p->destroy = NULL;
-	lua_getfield(L, -2, "Request");
-	lua_setuservalue(L, -2);
+	lua_pushlightuserdata(L, (void *)&http_req_parser);
 	lua_setfield(L, -2, "HTTPRequest");
-
-	p = lua_newuserdata(L, sizeof(struct lem_parser));
-	p->init = parse_http_res_init;
-	p->process = parse_http_process;
-	p->destroy = NULL;
-	lua_getfield(L, -2, "Response");
-	lua_setuservalue(L, -2);
+	lua_pushlightuserdata(L, (void *)&http_res_parser);
 	lua_setfield(L, -2, "HTTPResponse");
 
 	return 1;
