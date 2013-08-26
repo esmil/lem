@@ -418,6 +418,7 @@ stream_getpeer(lua_State *T)
 
 struct sfhandle {
 	struct lem_async a;
+	lua_State *T;
 	struct stream *s;
 	off_t size;
 	off_t offset;
@@ -481,8 +482,8 @@ static void
 stream_sendfile_reap(struct lem_async *a)
 {
 	struct sfhandle *sf = (struct sfhandle *)a;
+	lua_State *T = sf->T;
 	struct stream *s = sf->s;
-	lua_State *T = sf->a.T;
 	int ret;
 
 	if (sf->ret == 0) {
@@ -531,11 +532,12 @@ stream_sendfile(lua_State *T)
 	s->w.data = T;
 
 	sf = lem_xmalloc(sizeof(struct sfhandle));
+	sf->T = T;
 	sf->s = s;
 	sf->size = size;
 	sf->offset = offset;
 	sf->fd = f->fd;
-	lem_async_do(&sf->a, T, stream_sendfile_work, stream_sendfile_reap);
+	lem_async_do(&sf->a, stream_sendfile_work, stream_sendfile_reap);
 
 	lua_settop(T, 2);
 	return lua_yield(T, 2);

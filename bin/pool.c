@@ -100,7 +100,10 @@ pool_cb(EV_P_ struct ev_async *w, int revents)
 	for (; a; a = next) {
 		pool_jobs--;
 		next = a->next;
-		a->reap(a);
+		if (a->reap)
+			a->reap(a);
+		else
+			free(a);
 	}
 
 	if (pool_jobs == 0)
@@ -175,7 +178,7 @@ error:
 }
 
 void
-lem_async_put(struct lem_async *a)
+lem_async_run(struct lem_async *a)
 {
 	int spawn = 0;
 

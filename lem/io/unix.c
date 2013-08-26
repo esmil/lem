@@ -18,6 +18,7 @@
 
 struct unix_create {
 	struct lem_async a;
+	lua_State *T;
 	const char *path;
 	size_t len;
 	int sock;
@@ -76,7 +77,7 @@ static void
 unix_connect_reap(struct lem_async *a)
 {
 	struct unix_create *u = (struct unix_create *)a;
-	lua_State *T = u->a.T;
+	lua_State *T = u->T;
 	int sock = u->sock;
 
 	if (sock >= 0) {
@@ -113,9 +114,10 @@ unix_connect(lua_State *T)
 		return luaL_argerror(T, 1, "path too long");
 
 	u = lem_xmalloc(sizeof(struct unix_create));
+	u->T = T;
 	u->path = path;
 	u->len = len;
-	lem_async_do(&u->a, T, unix_connect_work, unix_connect_reap);
+	lem_async_do(&u->a, unix_connect_work, unix_connect_reap);
 
 	lua_settop(T, 1);
 	lua_pushvalue(T, lua_upvalueindex(1));
@@ -186,7 +188,7 @@ static void
 unix_listen_reap(struct lem_async *a)
 {
 	struct unix_create *u = (struct unix_create *)a;
-	lua_State *T = u->a.T;
+	lua_State *T = u->T;
 	int sock = u->sock;
 
 	if (sock >= 0) {
@@ -232,11 +234,12 @@ unix_listen(lua_State *T)
 		return luaL_argerror(T, 1, "path too long");
 
 	u = lem_xmalloc(sizeof(struct unix_create));
+	u->T = T;
 	u->path = path;
 	u->len = len;
 	u->sock = perm;
 	u->err = backlog;
-	lem_async_do(&u->a, T, unix_listen_work, unix_listen_reap);
+	lem_async_do(&u->a, unix_listen_work, unix_listen_reap);
 
 	lua_settop(T, 1);
 	lua_pushvalue(T, lua_upvalueindex(1));

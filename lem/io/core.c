@@ -114,6 +114,7 @@ error:
  */
 struct open {
 	struct lem_async a;
+	lua_State *T;
 	const char *path;
 	int fd;
 	int flags;
@@ -173,7 +174,7 @@ static void
 io_open_reap(struct lem_async *a)
 {
 	struct open *o = (struct open *)a;
-	lua_State *T = o->a.T;
+	lua_State *T = o->T;
 	int fd = o->fd;
 	int ret = o->flags;
 
@@ -247,10 +248,11 @@ io_open(lua_State *T)
 		return luaL_error(T, "invalid mode string");
 
 	o = lem_xmalloc(sizeof(struct open));
+	o->T = T;
 	o->path = path;
 	o->fd = perm;
 	o->flags = flags;
-	lem_async_do(&o->a, T, io_open_work, io_open_reap);
+	lem_async_do(&o->a, io_open_work, io_open_reap);
 
 	lua_settop(T, 1);
 	lua_pushvalue(T, lua_upvalueindex(1));
@@ -263,6 +265,7 @@ io_open(lua_State *T)
  */
 struct fromfd {
 	struct lem_async a;
+	lua_State *T;
 	int fd;
 	int ret;
 };
@@ -322,7 +325,7 @@ static void
 io_fromfd_reap(struct lem_async *a)
 {
 	struct fromfd *ff = (struct fromfd *)a;
-	lua_State *T = ff->a.T;
+	lua_State *T = ff->T;
 	int fd = ff->fd;
 	int ret = ff->ret;
 
@@ -351,8 +354,9 @@ io_fromfd(lua_State *T)
 		return luaL_argerror(T, 1, "invalid fd");
 
 	ff = lem_xmalloc(sizeof(struct fromfd));
+	ff->T = T;
 	ff->fd = fd;
-	lem_async_do(&ff->a, T, io_fromfd_work, io_fromfd_reap);
+	lem_async_do(&ff->a, io_fromfd_work, io_fromfd_reap);
 
 	lua_settop(T, 0);
 	lua_pushvalue(T, lua_upvalueindex(1));
@@ -434,13 +438,14 @@ error:
  */
 struct streamfile {
 	struct lem_async a;
+	lua_State *T;
 	const char *filename;
 	int pipe[2];
 	int file;
 };
 
 static void
-io_streamfile_work(struct lem_async *a)
+io_streamfile_worker(struct lem_async *a)
 {
 	struct streamfile *s = (struct streamfile *)a;
 	int file = s->file;
@@ -514,15 +519,9 @@ static void
 io_streamfile_reap(struct lem_async *a)
 {
 	struct streamfile *s = (struct streamfile *)a;
-	lua_State *T = s->a.T;
-	int ret;
+	lua_State *T = s->T;
+	int ret = s->file;
 
-	if (T == NULL) {
-		free(s);
-		return;
-	}
-
-	ret = s->file;
 	if (ret < 0) {
 		free(s);
 		lem_queue(T, io_strerror(T, -ret));
@@ -531,7 +530,7 @@ io_streamfile_reap(struct lem_async *a)
 	lem_debug("s->file = %d, s->pipe[0] = %d, s->pipe[1] = %d",
 			ret, s->pipe[0], s->pipe[1]);
 
-	lem_async_do(&s->a, NULL, io_streamfile_work, io_streamfile_reap);
+	lem_async_do(&s->a, io_streamfile_worker, NULL);
 
 	stream_new(T, s->pipe[0], 2);
 	lem_queue(T, 1);
@@ -543,8 +542,9 @@ io_streamfile(lua_State *T)
 	const char *filename = lua_tostring(T, 1);
 	struct streamfile *s = lem_xmalloc(sizeof(struct streamfile));
 
+	s->T = T;
 	s->filename = filename;
-	lem_async_do(&s->a, T, io_streamfile_open, io_streamfile_reap);
+	lem_async_do(&s->a, io_streamfile_open, io_streamfile_reap);
 
 	lua_settop(T, 1);
 	lua_pushvalue(T, lua_upvalueindex(1));

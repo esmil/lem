@@ -54,6 +54,7 @@ lfs_strerror(lua_State *T, int err)
 
 struct lfs_pathop {
 	struct lem_async a;
+	lua_State *T;
 	union {
 		const char *path;
 		int ret;
@@ -64,7 +65,7 @@ static void
 lfs_pathop_reap(struct lem_async *a)
 {
 	struct lfs_pathop *po = (struct lfs_pathop *)a;
-	lua_State *T = po->a.T;
+	lua_State *T = po->T;
 	int ret = po->ret;
 
 	free(po);
@@ -98,8 +99,9 @@ lfs_chdir(lua_State *T)
 	struct lfs_pathop *po;
 
 	po = lem_xmalloc(sizeof(struct lfs_pathop));
+	po->T = T;
 	po->path = path;
-	lem_async_do(&po->a, T, lfs_chdir_work, lfs_pathop_reap);
+	lem_async_do(&po->a, lfs_chdir_work, lfs_pathop_reap);
 
 	lua_settop(T, 1);
 	return lua_yield(T, 1);
@@ -127,8 +129,9 @@ lfs_mkdir(lua_State *T)
 	struct lfs_pathop *po;
 
 	po = lem_xmalloc(sizeof(struct lfs_pathop));
+	po->T = T;
 	po->path = path;
-	lem_async_do(&po->a, T, lfs_mkdir_work, lfs_pathop_reap);
+	lem_async_do(&po->a, lfs_mkdir_work, lfs_pathop_reap);
 
 	lua_settop(T, 1);
 	return lua_yield(T, 1);
@@ -155,8 +158,9 @@ lfs_rmdir(lua_State *T)
 	struct lfs_pathop *po;
 
 	po = lem_xmalloc(sizeof(struct lfs_pathop));
+	po->T = T;
 	po->path = path;
-	lem_async_do(&po->a, T, lfs_rmdir_work, lfs_pathop_reap);
+	lem_async_do(&po->a, lfs_rmdir_work, lfs_pathop_reap);
 
 	lua_settop(T, 1);
 	return lua_yield(T, 1);
@@ -183,8 +187,9 @@ lfs_remove(lua_State *T)
 	struct lfs_pathop *po;
 
 	po = lem_xmalloc(sizeof(struct lfs_pathop));
+	po->T = T;
 	po->path = path;
-	lem_async_do(&po->a, T, lfs_remove_work, lfs_pathop_reap);
+	lem_async_do(&po->a, lfs_remove_work, lfs_pathop_reap);
 
 	lua_settop(T, 1);
 	return lua_yield(T, 1);
@@ -195,6 +200,7 @@ lfs_remove(lua_State *T)
  */
 struct lfs_twoop {
 	struct lem_async a;
+	lua_State *T;
 	union {
 		struct {
 			const char *old;
@@ -208,7 +214,7 @@ static void
 lfs_twoop_reap(struct lem_async *a)
 {
 	struct lfs_twoop *to = (struct lfs_twoop *)a;
-	lua_State *T = to->a.T;
+	lua_State *T = to->T;
 	int ret = to->ret;
 
 	free(to);
@@ -252,9 +258,10 @@ lfs_link(lua_State *T)
 	struct lfs_twoop *to;
 
 	to = lem_xmalloc(sizeof(struct lfs_twoop));
+	to->T = T;
 	to->old = old;
 	to->new = new;
-	lem_async_do(&to->a, T, symlink ? lfs_symlink_work : lfs_link_work,
+	lem_async_do(&to->a, symlink ? lfs_symlink_work : lfs_link_work,
 			lfs_twoop_reap);
 
 	lua_settop(T, 2);
@@ -280,9 +287,10 @@ lfs_rename(lua_State *T)
 	struct lfs_twoop *to;
 
 	to = lem_xmalloc(sizeof(struct lfs_twoop));
+	to->T = T;
 	to->old = old;
 	to->new = new;
-	lem_async_do(&to->a, T, lfs_rename_work, lfs_twoop_reap);
+	lem_async_do(&to->a, lfs_rename_work, lfs_twoop_reap);
 
 	lua_settop(T, 2);
 	return lua_yield(T, 2);
@@ -294,6 +302,7 @@ lfs_rename(lua_State *T)
 struct lfs_attr {
 	struct lem_async a;
 	struct stat st;
+	lua_State *T;
 	const char *path;
 	int op;
 	int ret;
@@ -403,7 +412,7 @@ static void
 lfs_attr_reap(struct lem_async *a)
 {
 	struct lfs_attr *at = (struct lfs_attr *)a;
-	lua_State *T = at->a.T;
+	lua_State *T = at->T;
 	struct stat *st = &at->st;
 
 	if (at->ret) {
@@ -435,9 +444,10 @@ lfs_attr(lua_State *T)
 	struct lfs_attr *at;
 
 	at = lem_xmalloc(sizeof(struct lfs_attr));
+	at->T = T;
 	at->path = path;
 	at->op = op;
-	lem_async_do(&at->a, T, lfs_stat_work, lfs_attr_reap);
+	lem_async_do(&at->a, lfs_stat_work, lfs_attr_reap);
 
 	lua_settop(T, 1);
 	return lua_yield(T, 1);
@@ -450,8 +460,9 @@ lfs_symattr(lua_State *T)
 	struct lfs_attr *at;
 
 	at = lem_xmalloc(sizeof(struct lfs_attr));
+	at->T = T;
 	at->path = path;
-	lem_async_do(&at->a, T, lfs_lstat_work, lfs_attr_reap);
+	lem_async_do(&at->a, lfs_lstat_work, lfs_attr_reap);
 
 	lua_settop(T, 1);
 	return lua_yield(T, 1);
@@ -462,6 +473,7 @@ lfs_symattr(lua_State *T)
  */
 struct lfs_touch {
 	struct lem_async a;
+	lua_State *T;
 	union {
 		struct {
 			struct utimbuf utb;
@@ -487,7 +499,7 @@ static void
 lfs_touch_reap(struct lem_async *a)
 {
 	struct lfs_touch *t = (struct lfs_touch *)a;
-	lua_State *T = t->a.T;
+	lua_State *T = t->T;
 	int ret = t->ret;
 
 	free(t);
@@ -507,6 +519,7 @@ lfs_touch(lua_State *T)
 	struct lfs_touch *t;
 
 	t = lem_xmalloc(sizeof(struct lfs_touch));
+	t->T = T;
 	t->path = path;
 	if (lua_gettop(T) == 1) {
 		t->buf = NULL;
@@ -515,7 +528,7 @@ lfs_touch(lua_State *T)
 		t->utb.modtime = luaL_optnumber(T, 3, t->utb.actime);
 		t->buf = &t->utb;
 	}
-	lem_async_do(&t->a, T, lfs_touch_work, lfs_touch_reap);
+	lem_async_do(&t->a, lfs_touch_work, lfs_touch_reap);
 
 	lua_settop(T, 1);
 	return lua_yield(T, 1);
@@ -555,6 +568,7 @@ lfs_currentdir(lua_State *T)
  */
 struct lfs_dir {
 	struct lem_async a;
+	lua_State *T;
 	DIR *handle;
 	struct dirent *entry;
 	union {
@@ -590,7 +604,7 @@ lfs_dir_close(lua_State *T)
 	d = lua_touserdata(T, 1);
 	if (d->handle == NULL)
 		return lfs_closed(T);
-	if (d->a.T != NULL)
+	if (d->T != NULL)
 		return lfs_busy(T);
 
 	ret = closedir(d->handle);
@@ -626,9 +640,9 @@ static void
 lfs_dir_next_reap(struct lem_async *a)
 {
 	struct lfs_dir *d = (struct lfs_dir *)a;
-	lua_State *T = d->a.T;
+	lua_State *T = d->T;
 
-	d->a.T = NULL;
+	d->T = NULL;
 	if (d->ret) {
 		lem_queue(T, lfs_strerror(T, d->ret));
 		return;
@@ -650,10 +664,11 @@ lfs_dir_next(lua_State *T)
 	d = lua_touserdata(T, 1);
 	if (d->handle == NULL)
 		return lfs_closed(T);
-	if (d->a.T != NULL)
+	if (d->T != NULL)
 		return lfs_busy(T);
 
-	lem_async_do(&d->a, T, lfs_dir_next_work, lfs_dir_next_reap);
+	d->T = T;
+	lem_async_do(&d->a, lfs_dir_next_work, lfs_dir_next_reap);
 
 	lua_settop(T, 1);
 	return lua_yield(T, 1);
@@ -678,9 +693,9 @@ static void
 lfs_dir_reap(struct lem_async *a)
 {
 	struct lfs_dir *d = (struct lfs_dir *)a;
-	lua_State *T = d->a.T;
+	lua_State *T = d->T;
 
-	d->a.T = NULL;
+	d->T = NULL;
 	if (d->ret)
 		lem_queue(T, lfs_strerror(T, d->ret));
 	else
@@ -701,9 +716,10 @@ lfs_dir(lua_State *T)
 	lua_pushvalue(T, lua_upvalueindex(2));
 	lua_setmetatable(T, -2);
 
+	d->T = T;
 	d->handle = NULL;
 	d->path = path;
-	lem_async_do(&d->a, T, lfs_dir_work, lfs_dir_reap);
+	lem_async_do(&d->a, lfs_dir_work, lfs_dir_reap);
 
 	return lua_yield(T, 3);
 }
