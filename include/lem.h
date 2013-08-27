@@ -28,6 +28,12 @@
 # define __FUNCTION__ __func__ /* C99 */
 #endif
 
+/* Built-time assertions */
+#define LEM_BUILD_ASSERT__(prefix, line) prefix##line
+#define LEM_BUILD_ASSERT_(prefix, line) LEM_BUILD_ASSERT__(prefix, line)
+#define LEM_BUILD_ASSERT(x) \
+    typedef int LEM_BUILD_ASSERT_(lem_assert_, __LINE__)[(x) ? 1 : -1]
+
 #ifdef NDEBUG
 #define lem_debug(...)
 #else

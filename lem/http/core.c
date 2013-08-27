@@ -157,6 +157,7 @@ struct parse_http_state {
 	unsigned int w;
 	unsigned char state;
 };
+LEM_BUILD_ASSERT(sizeof(struct parse_http_state) < LEM_INPUTBUF_PSIZE);
 
 static void
 parse_http_init(lua_State *T)

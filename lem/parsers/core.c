@@ -18,6 +18,8 @@
 
 #include <lem-parsers.h>
 
+#define LEM_PSTATE_CHECK(x) LEM_BUILD_ASSERT(sizeof(x) < LEM_INPUTBUF_PSIZE)
+
 /*
  * read available data
  */
@@ -45,6 +47,7 @@ struct parse_target_state {
 	size_t target;
 	int parts;
 };
+LEM_PSTATE_CHECK(struct parse_target_state);
 
 static void
 parse_target_init(lua_State *T, struct lem_inputbuf *b)
@@ -97,6 +100,7 @@ static const struct lem_parser parser_target = {
 struct parse_all_state {
 	int parts;
 };
+LEM_PSTATE_CHECK(struct parse_all_state);
 
 static void
 parse_all_init(lua_State *T, struct lem_inputbuf *b)
@@ -159,6 +163,7 @@ struct parse_line_state {
 	int parts;
 	char stopbyte;
 };
+LEM_PSTATE_CHECK(struct parse_line_state);
 
 static void
 parse_line_init(lua_State *T, struct lem_inputbuf *b)
