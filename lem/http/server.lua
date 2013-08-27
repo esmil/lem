@@ -116,7 +116,7 @@ local function handleHTTP(self, client)
 				close = true
 			else
 				self.debug('open', err)
-				res = rewresponse(req)
+				res = newresponse(req)
 				headers = res.headers
 				response.not_found(req, res)
 			end
