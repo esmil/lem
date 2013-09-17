@@ -71,9 +71,15 @@ do
 	end
 end
 
-local M = {}
+local function lookup(signal)
+	return core.lookup(string.sub(signal, 4):upper())
+end
 
-function M.register(signum, func)
+local M = {}
+M.lookup = lookup
+
+function M.register(signal, func)
+	local signum = lookup(signal)
 	if not signum then return nil, 'unknown signal' end
 
 	local queue = queues[signum]
@@ -85,7 +91,8 @@ function M.register(signum, func)
 	return signal_install(signum)
 end
 
-function M.unregister(signum, func)
+function M.unregister(signal, func)
+	local signum = lookup(signal)
 	if not signum then return nil, 'unknown signal' end
 
 	local queue = queues[signum]

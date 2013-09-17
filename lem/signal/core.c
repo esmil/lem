@@ -25,7 +25,25 @@
 #include <stdlib.h>
 #include <string.h>
 
-static int signal_sethandler(lua_State *T);
+struct signal_mapping {
+	const char *name;
+	uint8_t	no;
+};
+
+/* Several signal numbers are architecture-dependent,
+ * therefore we need a lookup table on the C-side */
+#define ARRAYLEN(a) (sizeof(a)/sizeof((a)[0]))
+#define _(sig) { #sig, SIG ## sig }
+static struct signal_mapping sigmap[] = {
+	_(HUP), _(INT), _(USR1), _(USR2),
+	_(QUIT), _(ILL), _(TRAP), _(ABRT),
+	_(BUS), _(FPE), _(SEGV), _(PIPE),
+	_(ALRM), _(TERM), _(CONT), _(CHLD),
+	_(TSTP), _(TTIN), _(TTOU), _(PWR),
+	_(PROF), _(SYS), _(URG), _(VTALRM),
+	_(XCPU), _(XFSZ), _(WINCH)
+};
+#undef _
 
 #if EV_SIGNAL_ENABLE
 struct sigwatcher {
@@ -127,6 +145,24 @@ signal_os_unwatch(lua_State *T)
 #endif
 
 static int
+signal_lookup(lua_State *T)
+{
+	const char *needle = luaL_checkstring(T, 1);
+
+	unsigned int i;
+
+	for (i = 0; i < ARRAYLEN(sigmap); i++) {
+		struct signal_mapping *sig = &sigmap[i];
+		if (strcmp(sig->name, needle) == 0) {
+			lua_pushinteger(T, sig->no);
+			return 1;
+		}
+	}
+	lua_pushnil(T);
+	return 1;
+}
+
+static int
 signal_sethandler(lua_State *T)
 {
 	int type;
@@ -177,6 +213,9 @@ luaopen_lem_signal_core(lua_State *T)
 	/* create module table */
 	lua_newtable(T);
 
+	/* set lookup function */
+	lua_pushcfunction(T, signal_lookup);
+	lua_setfield(T, -2, "lookup");
 	/* set sethandler function */
 	lua_pushcfunction(T, signal_sethandler);
 	lua_setfield(T, -2, "sethandler");
