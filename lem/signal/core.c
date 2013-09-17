@@ -62,7 +62,7 @@ signal_os_handler(EV_P_ struct ev_signal *w, int revents)
 	(void)revents;
 
 	S = lem_newthread();
-	lua_pushlightuserdata(S, &signal_sethandler);
+	lua_pushlightuserdata(S, &sigmap);
 	lua_rawget(S, LUA_REGISTRYINDEX);
 	if (lua_type(S, 1) != LUA_TFUNCTION) {
 		lem_forgetthread(S);
@@ -144,6 +144,98 @@ signal_os_unwatch(lua_State *T)
 }
 #endif
 
+#if EV_CHILD_ENABLE
+static struct ev_child signal_child_watcher;
+
+static void
+signal_child_handler(EV_P_ struct ev_child *w, int revents)
+{
+	lua_State *S;
+	int status;
+
+	(void)revents;
+
+	S = lem_newthread();
+	lua_pushlightuserdata(S, &sigmap);
+	lua_rawget(S, LUA_REGISTRYINDEX);
+	if (lua_type(S, 1) != LUA_TFUNCTION) {
+		lem_forgetthread(S);
+		return;
+	}
+	lua_pushinteger(S, SIGCHLD);
+
+	status = w->rstatus;
+	lua_createtable(S, 0, 3);
+
+	if (WIFEXITED(status)) {
+		lua_pushinteger(S, WEXITSTATUS(status));
+		lua_setfield(S, -2, "status");
+		lua_pushstring(S, "exited");
+	} else if (WIFSIGNALED(status)) {
+		lua_pushinteger(S, WTERMSIG(status));
+		lua_setfield(S, -2, "signal");
+#ifdef WCOREDUMP
+		lua_pushboolean(S, WCOREDUMP(status));
+		lua_setfield(S, -2, "coredumped");
+#endif
+		lua_pushstring(S, "signaled");
+	} else if (WIFSTOPPED(status)) {
+		lua_pushinteger(S, WSTOPSIG(status));
+		lua_setfield(S, -2, "signal");
+		lua_pushstring(S, "stopped");
+	} else if (WIFCONTINUED(status)) {
+		lua_pushstring(S, "continued");
+	} else {
+		assert(0); /* XXX do something more graceful */
+	}
+	lua_setfield(S, -2, "type");
+
+	lem_queue(S, 2);
+}
+
+static int
+signal_child_watch(lua_State *T)
+{
+	if (!ev_is_active(&signal_child_watcher)) {
+		ev_child_start(LEM_ &signal_child_watcher);
+		ev_unref(LEM); /* watcher shouldn't keep loop alive */
+	}
+	lua_pushboolean(T, 1);
+	return 1;
+}
+
+static int
+signal_child_unwatch(lua_State *T)
+{
+	if (ev_is_active(&signal_child_watcher)) {
+		ev_ref(LEM);
+		ev_child_stop(LEM_ &signal_child_watcher);
+	}
+	lua_pushboolean(T, 1);
+	return 1;
+}
+#else /* EV_CHILD_ENABLE */
+static int
+signal_child_unsupported(lua_State *T)
+{
+	lua_pushnil(T);
+	lua_pushliteral(T, "Your libev is compiled without child support.");
+	return 2
+}
+
+static inline int
+signal_child_watch(lua_State *T)
+{
+	return signal_child_unsupported(T);
+}
+
+static inline int
+signal_child_unwatch(lua_State *T)
+{
+	return signal_child_unsupported(T);
+}
+#endif
+
 static int
 signal_lookup(lua_State *T)
 {
@@ -175,7 +267,7 @@ signal_sethandler(lua_State *T)
 		return luaL_argerror(T, 1, "expected nil or a function");
 
 	lua_settop(T, 1);
-	lua_pushlightuserdata(T, &signal_sethandler);
+	lua_pushlightuserdata(T, &sigmap);
 	lua_insert(T, 1);
 	lua_rawset(T, LUA_REGISTRYINDEX);
 	return 0;
@@ -187,10 +279,13 @@ signal_watch(lua_State *T)
 	int sig = luaL_checkint(T, 1);
 
 	lua_settop(T, 1);
-	lua_pushlightuserdata(T, &signal_sethandler);
+	lua_pushlightuserdata(T, &sigmap);
 	lua_rawget(T, LUA_REGISTRYINDEX);
 	if (lua_isnil(T, 2))
 		return luaL_error(T, "You must set a signal handler first");
+
+	if (sig == SIGCHLD)
+		return signal_child_watch(T);
 
 	return signal_os_watch(T, sig);
 }
@@ -199,12 +294,20 @@ static int
 signal_unwatch(lua_State *T)
 {
 	int sig = luaL_checkint(T, 1);
+
+	if (sig == SIGCHLD)
+		return signal_child_unwatch(T);
+
 	return signal_os_unwatch(T, sig);
 }
 
 int
 luaopen_lem_signal_core(lua_State *T)
 {
+#if EV_CHILD_ENABLE
+	ev_child_init(&signal_child_watcher, signal_child_handler, 0, 1);
+#endif
+
 #if EV_SIGNAL_ENABLE
 	sigemptyset(&signal_sigset);
 	/* signal_watchers = NULL; globals are zero initalized */
