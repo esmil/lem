@@ -1,0 +1,191 @@
+/*
+ * This file is part of LEM, a Lua Event Machine.
+ * Copyright 2013 Asbjørn Sloth Tønnesen
+ * Copyright 2013 Emil Renner Berthing
+ *
+ * LEM is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.
+ *
+ * LEM is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with LEM.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <lem.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <assert.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+static int signal_sethandler(lua_State *T);
+
+#if EV_SIGNAL_ENABLE
+struct sigwatcher {
+	struct sigwatcher *next;
+	struct ev_signal w;
+};
+
+static sigset_t signal_sigset;
+static struct sigwatcher *signal_watchers;
+
+static void
+signal_os_handler(EV_P_ struct ev_signal *w, int revents)
+{
+	lua_State *S;
+
+	(void)revents;
+
+	S = lem_newthread();
+	lua_pushlightuserdata(S, &signal_sethandler);
+	lua_rawget(S, LUA_REGISTRYINDEX);
+	if (lua_type(S, 1) != LUA_TFUNCTION) {
+		lem_forgetthread(S);
+		return;
+	}
+
+	lua_pushinteger(S, w->signum);
+	lem_queue(S, 1);
+}
+
+static int
+signal_os_watch(lua_State *T, int sig)
+{
+	struct sigwatcher *s;
+
+	if (sigismember(&signal_sigset, sig))
+		goto out; /* already watched */
+
+	s = lem_xmalloc(sizeof(struct sigwatcher));
+
+	ev_signal_init(&s->w, signal_os_handler, sig);
+	ev_set_priority(&s->w, EV_MAXPRI);
+	ev_signal_start(LEM_ &s->w);
+	ev_unref(LEM); /* watcher shouldn't keep loop alive */
+
+	sigaddset(&signal_sigset, sig);
+	pthread_sigmask(SIG_UNBLOCK, &signal_sigset, NULL);
+
+	s->next = signal_watchers;
+	signal_watchers = s;
+out:
+	lua_pushboolean(T, 1);
+	return 1;
+}
+
+static int
+signal_os_unwatch(lua_State *T, int sig)
+{
+	struct sigwatcher **prevp;
+	struct sigwatcher *s;
+
+	for (prevp = &signal_watchers, s = signal_watchers;
+			s != NULL;
+			prevp = &s->next, s = s->next) {
+		if (s->w.signum == sig)
+			break;
+	}
+	if (s != NULL) {
+		ev_ref(LEM);
+		ev_signal_stop(LEM_ &s->w);
+
+		sigdelset(&signal_sigset, sig);
+
+		*prevp = s->next;
+		free(s);
+	}
+	lua_pushboolean(T, 1);
+	return 1;
+}
+#else /* EV_SIGNAL_ENABLE */
+static int
+signal_os_unsupported(lua_State *T)
+{
+	lua_pushnil(T);
+	lua_pushliteral(T, "Your libev is compiled without signal support.");
+	return 2
+}
+
+static inline int
+signal_os_watch(lua_State *T)
+{
+	return signal_os_unsupported(T);
+}
+
+static inline int
+signal_os_unwatch(lua_State *T)
+{
+	return signal_os_unsupported(T);
+}
+#endif
+
+static int
+signal_sethandler(lua_State *T)
+{
+	int type;
+
+	if (lua_gettop(T) < 1)
+		lua_pushnil(T);
+
+	type = lua_type(T, 1);
+	if (type != LUA_TNIL && type != LUA_TFUNCTION)
+		return luaL_argerror(T, 1, "expected nil or a function");
+
+	lua_settop(T, 1);
+	lua_pushlightuserdata(T, &signal_sethandler);
+	lua_insert(T, 1);
+	lua_rawset(T, LUA_REGISTRYINDEX);
+	return 0;
+}
+
+static int
+signal_watch(lua_State *T)
+{
+	int sig = luaL_checkint(T, 1);
+
+	lua_settop(T, 1);
+	lua_pushlightuserdata(T, &signal_sethandler);
+	lua_rawget(T, LUA_REGISTRYINDEX);
+	if (lua_isnil(T, 2))
+		return luaL_error(T, "You must set a signal handler first");
+
+	return signal_os_watch(T, sig);
+}
+
+static int
+signal_unwatch(lua_State *T)
+{
+	int sig = luaL_checkint(T, 1);
+	return signal_os_unwatch(T, sig);
+}
+
+int
+luaopen_lem_signal_core(lua_State *T)
+{
+#if EV_SIGNAL_ENABLE
+	sigemptyset(&signal_sigset);
+	/* signal_watchers = NULL; globals are zero initalized */
+#endif
+
+	/* create module table */
+	lua_newtable(T);
+
+	/* set sethandler function */
+	lua_pushcfunction(T, signal_sethandler);
+	lua_setfield(T, -2, "sethandler");
+	/* set watch function */
+	lua_pushcfunction(T, signal_watch);
+	lua_setfield(T, -2, "watch");
+	/* set unwatch function */
+	lua_pushcfunction(T, signal_unwatch);
+	lua_setfield(T, -2, "unwatch");
+
+	return 1;
+}

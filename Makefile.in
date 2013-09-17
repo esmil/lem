@@ -29,6 +29,7 @@ llibs = \
 	lem/parsers.lua \
 	lem/io.lua \
 	lem/io/queue.lua \
+	lem/signal.lua \
 	lem/lfs.lua \
 	lem/http.lua \
 	lem/http/response.lua \
@@ -41,6 +42,7 @@ clibs = \
 	lem/utils.so \
 	lem/parsers/core.so \
 	lem/io/core.so \
+	lem/signal/core.so \
 	lem/lfs/core.so \
 	lem/http/core.so
 
