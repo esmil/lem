@@ -237,16 +237,32 @@ signal_child_unwatch(lua_State *T)
 #endif
 
 static int
-signal_lookup(lua_State *T)
+signal_tonumber(lua_State *T)
 {
 	const char *needle = luaL_checkstring(T, 1);
-
 	unsigned int i;
 
 	for (i = 0; i < ARRAYLEN(sigmap); i++) {
 		struct signal_mapping *sig = &sigmap[i];
 		if (strcmp(sig->name, needle) == 0) {
 			lua_pushinteger(T, sig->no);
+			return 1;
+		}
+	}
+	lua_pushnil(T);
+	return 1;
+}
+
+static int
+signal_tostring(lua_State *T)
+{
+	int needle = luaL_checkint(T, 1);
+	unsigned int i;
+
+	for (i = 0; i < ARRAYLEN(sigmap); i++) {
+		struct signal_mapping *sig = &sigmap[i];
+		if (sig->no == needle) {
+			lua_pushstring(T, sig->name);
 			return 1;
 		}
 	}
@@ -316,9 +332,12 @@ luaopen_lem_signal_core(lua_State *T)
 	/* create module table */
 	lua_newtable(T);
 
-	/* set lookup function */
-	lua_pushcfunction(T, signal_lookup);
-	lua_setfield(T, -2, "lookup");
+	/* set tonumber function */
+	lua_pushcfunction(T, signal_tonumber);
+	lua_setfield(T, -2, "tonumber");
+	/* set tostring function */
+	lua_pushcfunction(T, signal_tostring);
+	lua_setfield(T, -2, "tostring");
 	/* set sethandler function */
 	lua_pushcfunction(T, signal_sethandler);
 	lua_setfield(T, -2, "sethandler");

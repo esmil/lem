@@ -39,7 +39,7 @@ io.popen(cmd)
 sleeper:sleep(1)
 
 local function handler(signum)
-	print('got signal number ' .. signum)
+	print('got ' .. signal.lookup(signum))
 end
 
 print('catch sigint')

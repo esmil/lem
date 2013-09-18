@@ -72,13 +72,24 @@ do
 end
 
 local function lookup(signal)
-	return core.lookup(string.sub(signal, 4):upper())
+	if type(signal) == 'string' then
+		if string.sub(signal, 1, 3):upper() == 'SIG' then
+			signal = string.sub(signal, 4)
+		end
+		return core.tonumber(signal:upper())
+	else
+		local ret = core.tostring(signal)
+		if not ret then return nil end
+
+		return 'SIG' .. ret
+	end
 end
 
 local M = {}
 M.lookup = lookup
 
 function M.register(signal, func)
+	assert(type(signal) == 'string', 'signal should be a string')
 	local signum = lookup(signal)
 	if not signum then return nil, 'unknown signal' end
 
@@ -92,6 +103,7 @@ function M.register(signal, func)
 end
 
 function M.unregister(signal, func)
+	assert(type(signal) == 'string', 'signal should be a string')
 	local signum = lookup(signal)
 	if not signum then return nil, 'unknown signal' end
 
