@@ -1,6 +1,9 @@
+# @configure_input@
 CC           = @CC@
-CFLAGS      ?= @CFLAGS@
-CFLAGS      += @CPPFLAGS@
+CFLAGS       = @CFLAGS@
+CPPFLAGS     = @CPPFLAGS@
+CPPFLAGS    += @CPPFLAGS_ADD@
+LDFLAGS      = @LDFLAGS@
 SHARED       = @SHARED@
 LIBS         = @LIBS@
 
@@ -51,7 +54,7 @@ endif
 
 .PHONY: all strip install clean
 
-all: CFLAGS += -DNDEBUG
+all: CPPFLAGS += -DNDEBUG
 all: bin/lem lem.pc $(clibs)
 
 debug: bin/lem lem.pc $(clibs)
@@ -60,7 +63,7 @@ bin/libev.o: CFLAGS += -w
 include/lem.h: lua/luaconf.h
 bin/lua.o: lua/luaconf.h
 bin/lem.o: include/lem.h bin/pool.c
-bin/lem.o: CFLAGS += -D'LEM_LDIR="$(lmoddir)/"'
+bin/lem.o: CPPFLAGS += -D'LEM_LDIR="$(lmoddir)/"'
 lem/io/core.so: include/lem-parsers.h \
 	lem/io/file.c \
 	lem/io/stream.c \
@@ -72,7 +75,7 @@ lem/http/core.so: include/lem-parsers.h
 
 %.o: %.c
 	$E '  CC    $@'
-	$Q$(CC) $(CFLAGS) -c $< -o $@
+	$Q$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 bin/lem: $(objects)
 	$E '  LD    $@'
@@ -80,7 +83,7 @@ bin/lem: $(objects)
 
 %.so: %.c include/lem.h
 	$E '  CCLD  $@'
-	$Q$(CC) $(CFLAGS) -fPIC -nostartfiles $(SHARED) $< -o $@ $(LDFLAGS)
+	$Q$(CC) $(CFLAGS) $(CPPFLAGS) -fPIC -nostartfiles $(SHARED) $< -o $@ $(LDFLAGS)
 
 lua/luaconf.h: lua/luaconf.h.in
 	$E '  SED > $@'

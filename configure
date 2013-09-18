@@ -659,6 +659,7 @@ pkgconfigdir
 cmoddir
 lmoddir
 SHARED
+CPPFLAGS_ADD
 objects
 headers
 target_alias
@@ -2155,9 +2156,14 @@ headers='lem.h lem-parsers.h'
 
 objects='bin/lem.o'
 
+CPPFLAGS_ADD='-Iinclude'
+
 SHARED='-shared'
 
-CPPFLAGS='-Iinclude'
+
+if test "x$CFLAGS" = 'x'; then :
+  CFLAGS='-O2 -g -Wall -Wextra'
+fi
 
 
 # Check whether --with-lua was given.
@@ -3751,7 +3757,7 @@ fi
 # Configure libev
 objects="bin/libev.o $objects"
 headers="ev-config.h ev.h $headers"
-CPPFLAGS="$CPPFLAGS -Ilibev"
+CPPFLAGS_ADD="$CPPFLAGS_ADD -Ilibev"
 
 # Configure Lua
 ac_ext=c
@@ -5235,7 +5241,7 @@ fi
 
   objects="bin/lua.o $objects"
   headers="luaconf.h lua.h lauxlib.h $headers"
-  CPPFLAGS="$CPPFLAGS -Ilua"
+  CPPFLAGS_ADD="$CPPFLAGS_ADD -Ilua"
   Lua_CFLAGS=''
   Lua_LIBS=''
   ac_cv_func_luaL_traceback=yes
@@ -5247,7 +5253,7 @@ fi
 fi
 fi
 
-CPPFLAGS="$CPPFLAGS $Lua_CFLAGS"
+CPPFLAGS_ADD="$CPPFLAGS_ADD $Lua_CFLAGS"
 LIBS="$Lua_LIBS $LIBS"
 if test "x$lmoddir" = 'x'; then :
   lmoddir="`$PKG_CONFIG --variable=INSTALL_LMOD $with_lua`"
@@ -5265,7 +5271,7 @@ fi
 
 ac_fn_c_check_func "$LINENO" "luaL_traceback" "ac_cv_func_luaL_traceback"
 if test "x$ac_cv_func_luaL_traceback" = xyes; then :
-  CPPFLAGS="$CPPFLAGS -DHAVE_TRACEBACK"
+  CPPFLAGS_ADD="$CPPFLAGS_ADD -DHAVE_TRACEBACK"
 fi
 
 

@@ -7,8 +7,10 @@ AC_CONFIG_HEADERS([libev/ev-config.h:ev-config.h.in])
 
 AC_SUBST([headers], ['lem.h lem-parsers.h'])
 AC_SUBST([objects], ['bin/lem.o'])
+AC_SUBST([CPPFLAGS_ADD], ['-Iinclude'])
 AC_SUBST([SHARED], ['-shared'])
-CPPFLAGS='-Iinclude'
+
+AS_IF([test "x$CFLAGS" = 'x'], CFLAGS='-O2 -g -Wall -Wextra')
 
 AC_ARG_WITH([lua],
   [AS_HELP_STRING([--with-lua],
@@ -51,7 +53,7 @@ AC_SEARCH_LIBS([pthread_create], [pthread])
 # Configure libev
 objects="bin/libev.o $objects"
 headers="ev-config.h ev.h $headers"
-CPPFLAGS="$CPPFLAGS -Ilibev"
+CPPFLAGS_ADD="$CPPFLAGS_ADD -Ilibev"
 
 # Configure Lua
 AS_CASE(["x$with_lua"],
@@ -76,14 +78,14 @@ AS_IF([test "x$with_lua" = 'xbuiltin'],
   [AC_SEARCH_LIBS([dlopen], [dl])]
   [objects="bin/lua.o $objects"]
   [headers="luaconf.h lua.h lauxlib.h $headers"]
-  [CPPFLAGS="$CPPFLAGS -Ilua"]
+  [CPPFLAGS_ADD="$CPPFLAGS_ADD -Ilua"]
   [Lua_CFLAGS='']
   [Lua_LIBS='']
   [ac_cv_func_luaL_traceback=yes]
   [AS_IF([test "x$lmoddir" = 'x'], [lmoddir="\${datarootdir}/lua/$builtin_lua_version"])]
   [AS_IF([test "x$cmoddir" = 'x'], [cmoddir="\${libdir}/lua/$builtin_lua_version"])])
 
-CPPFLAGS="$CPPFLAGS $Lua_CFLAGS"
+CPPFLAGS_ADD="$CPPFLAGS_ADD $Lua_CFLAGS"
 LIBS="$Lua_LIBS $LIBS"
 AS_IF([test "x$lmoddir" = 'x'], [lmoddir="`$PKG_CONFIG --variable=INSTALL_LMOD $with_lua`"])
 AS_IF([test "x$cmoddir" = 'x'], [cmoddir="`$PKG_CONFIG --variable=INSTALL_CMOD $with_lua`"])
@@ -93,7 +95,7 @@ AS_IF([test "x$lmoddir" = 'x'],
 AS_IF([test "x$cmoddir" = 'x'],
   [AC_MSG_ERROR([unable to deduce Lua C module directory, please use --with-cmoddir=path])])
 
-AC_CHECK_FUNC([luaL_traceback], [CPPFLAGS="$CPPFLAGS -DHAVE_TRACEBACK"])
+AC_CHECK_FUNC([luaL_traceback], [CPPFLAGS_ADD="$CPPFLAGS_ADD -DHAVE_TRACEBACK"])
 
 # Checks for header files.
 AC_CHECK_HEADERS([stddef.h stdlib.h string.h unistd.h sys/time.h time.h pthread.h])
