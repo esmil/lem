@@ -91,8 +91,16 @@ stream_close(lua_State *T)
 	s = lua_touserdata(T, 1);
 	if (!s->open)
 		return io_closed(T);
-	if (s->r.data != NULL || s->w.data != NULL)
-		return io_busy(T);
+	if (s->r.data != NULL) {
+		ev_io_stop(LEM_ &s->r);
+		lem_queue(s->r.data, io_closed(s->r.data));
+		s->r.data = NULL;
+	}
+	if (s->w.data != NULL) {
+		ev_io_stop(LEM_ &s->w);
+		lem_queue(s->w.data, io_closed(s->w.data));
+		s->w.data = NULL;
+	}
 
 	s->open = 0;
 	if (close(s->r.fd))
