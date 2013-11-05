@@ -355,7 +355,10 @@ main(int argc, char *argv[])
 	lua_newtable(L);
 
 	/* initialize runqueue */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 	ev_idle_init(&rq.w, runqueue_pop);
+#pragma GCC diagnostic pop
 	ev_idle_start(LEM_ &rq.w);
 	rq.queue = lem_xmalloc(LEM_INITIAL_QUEUESIZE
 			* sizeof(struct lem_runqueue_slot));

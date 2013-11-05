@@ -39,8 +39,11 @@ stream_new(lua_State *T, int fd, int mt)
 	lua_setmetatable(T, -2);
 
 	/* initialize userdata */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 	ev_io_init(&s->r, NULL, fd, EV_READ);
 	ev_io_init(&s->w, NULL, fd, EV_WRITE);
+#pragma GCC diagnostic pop
 	s->open = 1;
 	s->r.data = NULL;
 	s->w.data = NULL;

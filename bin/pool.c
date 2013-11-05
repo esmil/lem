@@ -128,7 +128,10 @@ pool_init(void)
 	pool_done = NULL;
 	*/
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 	ev_async_init(&pool_watch, pool_cb);
+#pragma GCC diagnostic pop
 
 	ret = pthread_mutex_init(&pool_mutex, NULL);
 	if (ret == 0)
