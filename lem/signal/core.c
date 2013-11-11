@@ -39,9 +39,12 @@ static struct signal_mapping sigmap[] = {
 	_(QUIT), _(ILL), _(TRAP), _(ABRT),
 	_(BUS), _(FPE), _(SEGV), _(PIPE),
 	_(ALRM), _(TERM), _(CONT), _(CHLD),
-	_(TSTP), _(TTIN), _(TTOU), _(PWR),
-	_(PROF), _(SYS), _(URG), _(VTALRM),
-	_(XCPU), _(XFSZ), _(WINCH)
+	_(TSTP), _(TTIN), _(TTOU), _(PROF),
+	_(SYS), _(URG), _(VTALRM),
+	_(XCPU), _(XFSZ), _(WINCH),
+#ifdef SIGPWR
+	_(PWR),
+#endif
 };
 #undef _
 
