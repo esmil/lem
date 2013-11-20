@@ -76,6 +76,15 @@ signal_os_handler(EV_P_ struct ev_signal *w, int revents)
 	lem_queue(S, 1);
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+static inline void
+signal_watcher_init(struct sigwatcher *s, int sig)
+{
+	ev_signal_init(&s->w, signal_os_handler, sig);
+}
+#pragma GCC diagnostic pop
+
 static int
 signal_os_watch(lua_State *T, int sig)
 {
@@ -86,10 +95,7 @@ signal_os_watch(lua_State *T, int sig)
 
 	s = lem_xmalloc(sizeof(struct sigwatcher));
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-	ev_signal_init(&s->w, signal_os_handler, sig);
-#pragma GCC diagnostic pop
+	signal_watcher_init(s, sig);
 	ev_set_priority(&s->w, EV_MAXPRI);
 	ev_signal_start(LEM_ &s->w);
 	ev_unref(LEM); /* watcher shouldn't keep loop alive */
@@ -199,14 +205,20 @@ signal_child_handler(EV_P_ struct ev_child *w, int revents)
 	lem_queue(S, 2);
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+static inline void
+signal_child_watcher_init(void)
+{
+	ev_child_init(&signal_child_watcher, signal_child_handler, 0, 1);
+}
+
 static inline int
 signal_child_active(void)
 {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 	return ev_is_active(&signal_child_watcher);
-#pragma GCC diagnostic pop
 }
+#pragma GCC diagnostic pop
 
 static int
 signal_child_watch(lua_State *T)
@@ -336,10 +348,7 @@ int
 luaopen_lem_signal_core(lua_State *T)
 {
 #if EV_CHILD_ENABLE
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-	ev_child_init(&signal_child_watcher, signal_child_handler, 0, 1);
-#pragma GCC diagnostic pop
+	signal_child_watcher_init();
 #endif
 
 #if EV_SIGNAL_ENABLE

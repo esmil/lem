@@ -110,6 +110,15 @@ pool_cb(EV_P_ struct ev_async *w, int revents)
 		ev_async_stop(EV_A_ w);
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+static inline void
+pool_watch_init(void)
+{
+	ev_async_init(&pool_watch, pool_cb);
+}
+#pragma GCC diagnostic pop
+
 static int
 pool_init(void)
 {
@@ -128,10 +137,7 @@ pool_init(void)
 	pool_done = NULL;
 	*/
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-	ev_async_init(&pool_watch, pool_cb);
-#pragma GCC diagnostic pop
+	pool_watch_init();
 
 	ret = pthread_mutex_init(&pool_mutex, NULL);
 	if (ret == 0)

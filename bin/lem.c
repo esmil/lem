@@ -323,6 +323,15 @@ queue_file(int argc, char *argv[], int fidx)
 	return 0;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+static inline void
+runqueue_wait_init(void)
+{
+	ev_idle_init(&rq.w, runqueue_pop);
+}
+#pragma GCC diagnostic pop
+
 int
 main(int argc, char *argv[])
 {
@@ -355,10 +364,7 @@ main(int argc, char *argv[])
 	lua_newtable(L);
 
 	/* initialize runqueue */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-	ev_idle_init(&rq.w, runqueue_pop);
-#pragma GCC diagnostic pop
+	runqueue_wait_init();
 	ev_idle_start(LEM_ &rq.w);
 	rq.queue = lem_xmalloc(LEM_INITIAL_QUEUESIZE
 			* sizeof(struct lem_runqueue_slot));

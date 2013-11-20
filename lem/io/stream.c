@@ -30,6 +30,16 @@ struct stream {
 #define STREAM_FROM_WATCH(w, member)\
 	(struct stream *)(((char *)w) - offsetof(struct stream, member))
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+static inline void
+stream_watch_init(struct stream *s, int fd)
+{
+	ev_io_init(&s->r, NULL, fd, EV_READ);
+	ev_io_init(&s->w, NULL, fd, EV_WRITE);
+}
+#pragma GCC diagnostic pop
+
 static struct stream *
 stream_new(lua_State *T, int fd, int mt)
 {
@@ -39,11 +49,7 @@ stream_new(lua_State *T, int fd, int mt)
 	lua_setmetatable(T, -2);
 
 	/* initialize userdata */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-	ev_io_init(&s->r, NULL, fd, EV_READ);
-	ev_io_init(&s->w, NULL, fd, EV_WRITE);
-#pragma GCC diagnostic pop
+	stream_watch_init(s, fd);
 	s->open = 1;
 	s->r.data = NULL;
 	s->w.data = NULL;
