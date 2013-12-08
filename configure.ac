@@ -3,7 +3,6 @@ AC_INIT([[lem]], [[0.3]], [[esmil@mailme.dk]])
 builtin_lua_version='5.2'
 
 AC_LANG(C)
-AC_CONFIG_HEADERS([libev/ev-config.h:ev-config.h.in])
 
 AC_SUBST([headers], ['lem.h lem-parsers.h'])
 AC_SUBST([objects], ['bin/lem.o'])
@@ -100,6 +99,7 @@ AC_CHECK_FUNC([luaL_traceback], [CPPFLAGS_ADD="$CPPFLAGS_ADD -DHAVE_TRACEBACK"])
 # Checks for header files.
 AC_CHECK_HEADERS([stddef.h stdlib.h string.h unistd.h sys/time.h time.h pthread.h])
 AC_CHECK_HEADERS([sys/eventfd.h sys/epoll.h sys/event.h])
+AC_CHECK_HEADER([spawn.h], [CPPFLAGS_ADD="$CPPFLAGS_ADD -DHAVE_POSIX_SPAWN"])
 
 AS_IF([test "x$ac_cv_header_sys_eventfd_h" = 'xyes'],
   [AC_CHECK_FUNC([eventfd],
@@ -137,5 +137,6 @@ AS_IF([test "x$ac_cv_func_epoll_ctl" = 'xyes'], [
   AC_MSG_ERROR([neither poll or select found])
 ])])])])
 
+AC_CONFIG_HEADERS([libev/ev-config.h:ev-config.h.in])
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

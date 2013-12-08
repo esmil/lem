@@ -30,7 +30,10 @@
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
+
+#ifdef HAVE_POSIX_SPAWN
 #include <spawn.h>
+#endif
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 #include <sys/un.h>
@@ -370,6 +373,7 @@ io_fromfd(lua_State *T)
  */
 static const char *const io_popen_modes[] = { "r", "w", "rw", NULL };
 
+#ifdef HAVE_POSIX_SPAWN
 static int
 io_popen(lua_State *T)
 {
@@ -432,6 +436,68 @@ error:
 	close(fd[1]);
 	return io_strerror(T, err);
 }
+#else /* no posix spawn :( */
+static int
+io_popen(lua_State *T)
+{
+	const char *cmd = luaL_checkstring(T, 1);
+	int mode = luaL_checkoption(T, 2, "r", io_popen_modes);
+	int fd[2];
+	pid_t pid;
+	int ret;
+
+	if (mode == 2)
+		ret = socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
+	else
+		ret = pipe(fd);
+	if (ret)
+		return io_strerror(T, errno);
+
+	/* switch pipe fd's so fd[0] is always our end */
+	if (mode == 1) {
+		ret = fd[0];
+		fd[0] = fd[1];
+		fd[1] = ret;
+	}
+
+	/* set our socket flags */
+	if (fcntl(fd[0], F_SETFD, FD_CLOEXEC) == -1 ||
+			fcntl(fd[0], F_SETFL, O_NONBLOCK) == -1)
+		goto error;
+
+	pid = fork();
+	if (pid < 0)
+		goto error;
+	if (pid == 0) { /* child */
+		switch (mode) {
+		case 0: /* r */
+			dup2(fd[1], 1);
+			break;
+		case 1: /* w */
+			dup2(fd[1], 0);
+			break;
+		case 2: /* rw */
+			dup2(fd[1], 0);
+			dup2(fd[1], 1);
+			break;
+		}
+
+		close(fd[1]);
+		execl("/bin/sh", "/bin/sh", "-c", cmd, NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	close(fd[1]);
+	stream_new(T, fd[0], lua_upvalueindex(1));
+	lua_pushnumber(T, pid);
+	return 2;
+error:
+	ret = errno;
+	close(fd[0]);
+	close(fd[1]);
+	return io_strerror(T, ret);
+}
+#endif
 
 /*
  * io.streamfile()

@@ -2149,8 +2149,6 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
-ac_config_headers="$ac_config_headers libev/ev-config.h:ev-config.h.in"
-
 
 headers='lem.h lem-parsers.h'
 
@@ -5302,6 +5300,12 @@ fi
 
 done
 
+ac_fn_c_check_header_mongrel "$LINENO" "spawn.h" "ac_cv_header_spawn_h" "$ac_includes_default"
+if test "x$ac_cv_header_spawn_h" = xyes; then :
+  CPPFLAGS_ADD="$CPPFLAGS_ADD -DHAVE_POSIX_SPAWN"
+fi
+
+
 
 if test "x$ac_cv_header_sys_eventfd_h" = 'xyes'; then :
   ac_fn_c_check_func "$LINENO" "eventfd" "ac_cv_func_eventfd"
@@ -5396,6 +5400,8 @@ fi
 fi
 fi
 fi
+
+ac_config_headers="$ac_config_headers libev/ev-config.h:ev-config.h.in"
 
 ac_config_files="$ac_config_files Makefile"
 
