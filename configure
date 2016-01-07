@@ -2141,7 +2141,7 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
-builtin_lua_version='5.2'
+builtin_lua_version='5.3'
 
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -3773,12 +3773,12 @@ if test -n "$Lua_CFLAGS"; then
     pkg_cv_Lua_CFLAGS="$Lua_CFLAGS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua5.2\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "lua5.2") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua5.3\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lua5.3") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_Lua_CFLAGS=`$PKG_CONFIG --cflags "lua5.2" 2>/dev/null`
+  pkg_cv_Lua_CFLAGS=`$PKG_CONFIG --cflags "lua5.3" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -3790,12 +3790,12 @@ if test -n "$Lua_LIBS"; then
     pkg_cv_Lua_LIBS="$Lua_LIBS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua5.2\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "lua5.2") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua5.3\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lua5.3") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_Lua_LIBS=`$PKG_CONFIG --libs "lua5.2" 2>/dev/null`
+  pkg_cv_Lua_LIBS=`$PKG_CONFIG --libs "lua5.3" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -3816,9 +3816,9 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-	        Lua_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "lua5.2" 2>&1`
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "lua5.3" 2>&1`
         else
-	        Lua_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "lua5.2" 2>&1`
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "lua5.3" 2>&1`
         fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$Lua_PKG_ERRORS" >&5
@@ -3832,12 +3832,12 @@ if test -n "$Lua_CFLAGS"; then
     pkg_cv_Lua_CFLAGS="$Lua_CFLAGS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua52\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "lua52") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua53\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lua53") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_Lua_CFLAGS=`$PKG_CONFIG --cflags "lua52" 2>/dev/null`
+  pkg_cv_Lua_CFLAGS=`$PKG_CONFIG --cflags "lua53" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -3849,12 +3849,12 @@ if test -n "$Lua_LIBS"; then
     pkg_cv_Lua_LIBS="$Lua_LIBS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua52\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "lua52") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua53\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lua53") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_Lua_LIBS=`$PKG_CONFIG --libs "lua52" 2>/dev/null`
+  pkg_cv_Lua_LIBS=`$PKG_CONFIG --libs "lua53" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -3875,9 +3875,9 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-	        Lua_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "lua52" 2>&1`
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "lua53" 2>&1`
         else
-	        Lua_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "lua52" 2>&1`
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "lua53" 2>&1`
         fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$Lua_PKG_ERRORS" >&5
@@ -3951,7 +3951,7 @@ else
 	Lua_LIBS=$pkg_cv_Lua_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	if test "x$($PKG_CONFIG --variable=V lua)" = 'x5.2'; then :
+	if test "x$($PKG_CONFIG --variable=V lua)" = 'x5.3'; then :
   with_lua=lua
 else
   with_lua=builtin
@@ -4029,7 +4029,7 @@ else
 	Lua_LIBS=$pkg_cv_Lua_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	if test "x$($PKG_CONFIG --variable=V lua)" = 'x5.2'; then :
+	if test "x$($PKG_CONFIG --variable=V lua)" = 'x5.3'; then :
   with_lua=lua
 else
   with_lua=builtin
@@ -4040,7 +4040,7 @@ else
 	Lua_LIBS=$pkg_cv_Lua_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	with_lua=lua52
+	with_lua=lua53
 fi
 elif test $pkg_failed = untried; then
      	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -4054,12 +4054,12 @@ if test -n "$Lua_CFLAGS"; then
     pkg_cv_Lua_CFLAGS="$Lua_CFLAGS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua52\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "lua52") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua53\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lua53") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_Lua_CFLAGS=`$PKG_CONFIG --cflags "lua52" 2>/dev/null`
+  pkg_cv_Lua_CFLAGS=`$PKG_CONFIG --cflags "lua53" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -4071,12 +4071,12 @@ if test -n "$Lua_LIBS"; then
     pkg_cv_Lua_LIBS="$Lua_LIBS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua52\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "lua52") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lua53\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lua53") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_Lua_LIBS=`$PKG_CONFIG --libs "lua52" 2>/dev/null`
+  pkg_cv_Lua_LIBS=`$PKG_CONFIG --libs "lua53" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -4097,9 +4097,9 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-	        Lua_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "lua52" 2>&1`
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "lua53" 2>&1`
         else
-	        Lua_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "lua52" 2>&1`
+	        Lua_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "lua53" 2>&1`
         fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$Lua_PKG_ERRORS" >&5
@@ -4173,7 +4173,7 @@ else
 	Lua_LIBS=$pkg_cv_Lua_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	if test "x$($PKG_CONFIG --variable=V lua)" = 'x5.2'; then :
+	if test "x$($PKG_CONFIG --variable=V lua)" = 'x5.3'; then :
   with_lua=lua
 else
   with_lua=builtin
@@ -4251,7 +4251,7 @@ else
 	Lua_LIBS=$pkg_cv_Lua_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	if test "x$($PKG_CONFIG --variable=V lua)" = 'x5.2'; then :
+	if test "x$($PKG_CONFIG --variable=V lua)" = 'x5.3'; then :
   with_lua=lua
 else
   with_lua=builtin
@@ -4262,14 +4262,14 @@ else
 	Lua_LIBS=$pkg_cv_Lua_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	with_lua=lua52
+	with_lua=lua53
 fi
 else
 	Lua_CFLAGS=$pkg_cv_Lua_CFLAGS
 	Lua_LIBS=$pkg_cv_Lua_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	with_lua=lua5.2
+	with_lua=lua5.3
 fi ;; #(
   *) :
 

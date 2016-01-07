@@ -1,6 +1,6 @@
 AC_PREREQ([2.69])
 AC_INIT([[lem]], [[0.3]], [[esmil@mailme.dk]])
-builtin_lua_version='5.2'
+builtin_lua_version='5.3'
 
 AC_LANG(C)
 AC_CONFIG_HEADERS([libev/ev-config.h:ev-config.h.in])
@@ -60,10 +60,10 @@ AS_CASE(["x$with_lua"],
   [xbuiltin],
   [],
   [xcheck],
-  [PKG_CHECK_MODULES([Lua], [lua5.2], [with_lua=lua5.2],
-  [PKG_CHECK_MODULES([Lua], [lua52],  [with_lua=lua52],
+  [PKG_CHECK_MODULES([Lua], [lua5.3], [with_lua=lua5.3],
+  [PKG_CHECK_MODULES([Lua], [lua53],  [with_lua=lua53],
   [PKG_CHECK_MODULES([Lua], [lua],
-    [AS_IF([test "x$($PKG_CONFIG --variable=V lua)" = 'x5.2'],
+    [AS_IF([test "x$($PKG_CONFIG --variable=V lua)" = 'x5.3'],
       [with_lua=lua],
       [with_lua=builtin])],
     [with_lua=builtin])])])],

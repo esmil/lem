@@ -348,7 +348,7 @@ io_fromfd_reap(struct lem_async *a)
 static int
 io_fromfd(lua_State *T)
 {
-	int fd = luaL_checkint(T, 1);
+	int fd = luaL_checkinteger(T, 1);
 	struct fromfd *ff;
 
 	if (fd < 0)
@@ -425,7 +425,7 @@ io_popen(lua_State *T)
 	posix_spawn_file_actions_destroy(&fa);
 	close(fd[1]);
 	stream_new(T, fd[0], lua_upvalueindex(1));
-	lua_pushnumber(T, pid);
+	lua_pushinteger(T, pid);
 	return 2;
 error:
 	posix_spawn_file_actions_destroy(&fa);

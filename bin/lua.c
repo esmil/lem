@@ -1,9 +1,9 @@
 /* setup for luaconf.h */
 #define LUA_CORE
 #define LUA_LIB
-#define ltable_c
 #define lvm_c
-#include <luaconf.h>
+#include "luaconf.h"
+#include "lprefix.h"
 
 /* do not export internal symbols */
 #undef LUAI_FUNC
@@ -13,7 +13,7 @@
 #define LUAI_DDEC	static
 #define LUAI_DDEF	static
 
-/* core */
+/* core -- used by all */
 #include "../lua/lapi.c"
 #include "../lua/lcode.c"
 #include "../lua/lctype.c"
@@ -35,12 +35,14 @@
 #include "../lua/lvm.c"
 #include "../lua/lzio.c"
 
-/* auxiliary library */
+/* auxiliary library -- used by all */
 #include "../lua/lauxlib.c"
 
-/* standard library */
+/* standard library  -- not used by luac */
 #include "../lua/lbaselib.c"
+#if defined(LUA_COMPAT_BITLIB)
 #include "../lua/lbitlib.c"
+#endif
 #include "../lua/lcorolib.c"
 #include "../lua/ldblib.c"
 #include "../lua/liolib.c"
@@ -49,4 +51,5 @@
 #include "../lua/loslib.c"
 #include "../lua/lstrlib.c"
 #include "../lua/ltablib.c"
+#include "../lua/lutf8lib.c"
 #include "../lua/linit.c"

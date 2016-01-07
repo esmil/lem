@@ -290,7 +290,7 @@ signal_tonumber(lua_State *T)
 static int
 signal_tostring(lua_State *T)
 {
-	int needle = luaL_checkint(T, 1);
+	int needle = luaL_checkinteger(T, 1);
 	unsigned int i;
 
 	for (i = 0; i < ARRAYLEN(sigmap); i++) {
@@ -326,7 +326,7 @@ signal_sethandler(lua_State *T)
 static int
 signal_watch(lua_State *T)
 {
-	int sig = luaL_checkint(T, 1);
+	int sig = luaL_checkinteger(T, 1);
 
 	lua_settop(T, 1);
 	lua_pushlightuserdata(T, &sigmap);
@@ -343,7 +343,7 @@ signal_watch(lua_State *T)
 static int
 signal_unwatch(lua_State *T)
 {
-	int sig = luaL_checkint(T, 1);
+	int sig = luaL_checkinteger(T, 1);
 
 	if (sig == SIGCHLD)
 		return signal_child_unwatch(T);

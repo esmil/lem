@@ -391,20 +391,20 @@ static void
 lfs_attr_push(lua_State *T, struct stat *st, int i)
 {
 	switch (i) {
-	case 0:  lua_pushnumber(T, st->st_dev); break;
-	case 1:  lua_pushnumber(T, st->st_ino); break;
+	case 0:  lua_pushinteger(T, st->st_dev); break;
+	case 1:  lua_pushinteger(T, st->st_ino); break;
 	case 2:  lfs_attr_pushmode(T, st->st_mode); break;
 	case 3:  lfs_attr_pushperm(T, st->st_mode); break;
-	case 4:  lua_pushnumber(T, st->st_nlink); break;
-	case 5:  lua_pushnumber(T, st->st_uid); break;
-	case 6:  lua_pushnumber(T, st->st_gid); break;
-	case 7:  lua_pushnumber(T, st->st_rdev); break;
-	case 8:  lua_pushnumber(T, st->st_size); break;
-	case 9:  lua_pushnumber(T, st->st_blksize); break;
-	case 10: lua_pushnumber(T, st->st_blocks); break;
-	case 11: lua_pushnumber(T, st->st_atime); break;
-	case 12: lua_pushnumber(T, st->st_mtime); break;
-	case 13: lua_pushnumber(T, st->st_ctime); break;
+	case 4:  lua_pushinteger(T, st->st_nlink); break;
+	case 5:  lua_pushinteger(T, st->st_uid); break;
+	case 6:  lua_pushinteger(T, st->st_gid); break;
+	case 7:  lua_pushinteger(T, st->st_rdev); break;
+	case 8:  lua_pushinteger(T, st->st_size); break;
+	case 9:  lua_pushinteger(T, st->st_blksize); break;
+	case 10: lua_pushinteger(T, st->st_blocks); break;
+	case 11: lua_pushinteger(T, st->st_atime); break;
+	case 12: lua_pushinteger(T, st->st_mtime); break;
+	case 13: lua_pushinteger(T, st->st_ctime); break;
 	}
 }
 

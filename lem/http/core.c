@@ -274,7 +274,7 @@ parse_http_process(lua_State *T, struct lem_inputbuf *b)
 					n += b->buf[k] - '0';
 				}
 
-				lua_pushnumber(T, n);
+				lua_pushinteger(T, n);
 			}
 			lua_setfield(T, -2, "status");
 			w = 0;
