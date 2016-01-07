@@ -28,7 +28,7 @@ local sleeper = utils.newsleeper()
 
 assert(signal.register('sigchld', function(signum, ev)
 	if ev.type == 'exited' then
-		print('child ' .. ev.type .. ' with status ' .. ev.status)
+		print('child ' .. ev.rpid .. ' ' .. ev.type .. ' with status ' .. ev.status)
 	end
 end))
 

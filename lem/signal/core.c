@@ -164,6 +164,8 @@ signal_child_handler(EV_P_ struct ev_child *w, int revents)
 {
 	lua_State *S;
 	int status;
+	int pid = w->pid;
+	int rpid = w->rpid;
 
 	(void)revents;
 
@@ -177,7 +179,12 @@ signal_child_handler(EV_P_ struct ev_child *w, int revents)
 	lua_pushinteger(S, SIGCHLD);
 
 	status = w->rstatus;
-	lua_createtable(S, 0, 3);
+	lua_createtable(S, 0, 5);
+
+	lua_pushinteger(S, pid);
+	lua_setfield(S, -2, "pid");
+	lua_pushinteger(S, rpid);
+	lua_setfield(S, -2, "rpid");
 
 	if (WIFEXITED(status)) {
 		lua_pushinteger(S, WEXITSTATUS(status));
