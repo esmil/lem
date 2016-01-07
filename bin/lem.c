@@ -191,30 +191,10 @@ lem_queue(lua_State *T, int nargs)
 static void
 thread_error(lua_State *T)
 {
-#ifdef HAVE_TRACEBACK
 	const char *msg = lua_tostring(T, -1);
 
 	if (msg)
 		luaL_traceback(L, T, msg, 0);
-#else /* adapted from Lua 5.1 source */
-	if (!lua_isstring(T, -1)) /* 'message' not a string? */
-		return;
-	lua_getfield(T, LUA_GLOBALSINDEX, "debug");
-	if (!lua_istable(T, -1)) {
-		lua_pop(T, 1);
-		goto merror;
-	}
-	lua_getfield(T, -1, "traceback");
-	if (!lua_isfunction(T, -1)) {
-		lua_pop(T, 2);
-		goto merror;
-	}
-	lua_pushvalue(T, -3);  /* pass error message */
-	lua_pushinteger(T, 1); /* skip traceback */
-	lua_call(T, 2, 1);     /* call debug.traceback */
-merror:
-	lua_xmove(T, L, 1);    /* move error message to L */
-#endif
 }
 
 static void
@@ -250,11 +230,7 @@ runqueue_pop(EV_P_ struct ev_idle *w, int revents)
 	rq.first &= rq.mask;
 
 	/* run Lua thread */
-#if LUA_VERSION_NUM >= 502
 	switch (lua_resume(T, NULL, nargs)) {
-#else
-	switch (lua_resume(T, nargs)) {
-#endif
 	case LUA_OK: /* thread finished successfully */
 		lem_debug("thread finished successfully");
 		lem_forgetthread(T);
@@ -266,10 +242,8 @@ runqueue_pop(EV_P_ struct ev_idle *w, int revents)
 
 	case LUA_ERRERR: /* error running error handler */
 		lem_debug("thread errored while running error handler");
-#if LUA_VERSION_NUM >= 502
 	case LUA_ERRGCMM:
 		lem_debug("error in __gc metamethod");
-#endif
 	case LUA_ERRRUN: /* runtime error */
 		lem_debug("thread errored");
 		thread_error(T);

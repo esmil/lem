@@ -17,9 +17,6 @@
 --
 
 local load = load
-if _VERSION == 'Lua 5.1' then
-	load = loadstring
-end
 
 local format = string.format
 local concat = table.concat

@@ -60,16 +60,13 @@ AS_CASE(["x$with_lua"],
   [xbuiltin],
   [],
   [xcheck],
-  [PKG_CHECK_MODULES([Lua], [lua],    [with_lua=lua],
   [PKG_CHECK_MODULES([Lua], [lua5.2], [with_lua=lua5.2],
-  [PKG_CHECK_MODULES([Lua], [lua5.1], [with_lua=lua5.1],
-    [AC_CHECK_LIB([lua], [lua_newstate],
-      [AC_CHECK_HEADER([lua.h],
-	[with_lua=lua]
-        [Lua_CFLAGS='']
-        [Lua_LIBS='-llua'],
-        [with_lua=builtin])],
-      [with_lua=builtin])])])])],
+  [PKG_CHECK_MODULES([Lua], [lua52],  [with_lua=lua52],
+  [PKG_CHECK_MODULES([Lua], [lua],
+    [AS_IF([test "x$($PKG_CONFIG --variable=V lua)" = 'x5.2'],
+      [with_lua=lua],
+      [with_lua=builtin])],
+    [with_lua=builtin])])])],
   [PKG_CHECK_MODULES([Lua], ["$with_lua"], [],
     [AC_MSG_ERROR(["pkg-config package '$with_lua' not found"])])])
 
@@ -94,8 +91,6 @@ AS_IF([test "x$lmoddir" = 'x'],
   [AC_MSG_ERROR([unable to deduce Lua module directory, please use --with-lmoddir=path])])
 AS_IF([test "x$cmoddir" = 'x'],
   [AC_MSG_ERROR([unable to deduce Lua C module directory, please use --with-cmoddir=path])])
-
-AC_CHECK_FUNC([luaL_traceback], [CPPFLAGS_ADD="$CPPFLAGS_ADD -DHAVE_TRACEBACK"])
 
 # Checks for header files.
 AC_CHECK_HEADERS([stddef.h stdlib.h string.h unistd.h sys/time.h time.h pthread.h])
