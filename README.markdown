@@ -90,7 +90,7 @@ and do
     $ ./configure --prefix=<your prefix>
     $ make
 
-Now you can try out some of the test scripts.
+Now you can try out some of the test scripts. The test scripts also serve as examples.
 
     $ test/sleep.lua
     $ test/lfs.lua
@@ -141,6 +141,7 @@ arguments in the global table `arg` where `arg[-1]` is the interpreter,
 Running Lua scripts in the Lua Event Machine however, will allow you
 to load the LEM modules, which will fail in the normal interpreter.
 
+See the test folder for examples of how to use the different parts of LEM.
 
 License
 -------
