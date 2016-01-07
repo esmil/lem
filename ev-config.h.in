@@ -23,7 +23,7 @@
 #undef EV_USE_SELECT
 #undef EV_USE_POLL
 #undef EV_USE_EPOLL
-#undef EV_USE_KQUEUE 0
+#undef EV_USE_KQUEUE
 #define EV_USE_PORT 0
 
 #define EV_MULTIPLICITY 0
