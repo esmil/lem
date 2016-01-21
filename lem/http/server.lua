@@ -145,7 +145,7 @@ local function handleHTTP(self, client)
 		end
 
 		if headers['Date'] == nil then
-			headers['Date'] = date('!%a, %d %b %Y %T GMT')
+			headers['Date'] = date('!%a, %d %b %Y %H:%M:%S GMT')
 		end
 
 		if headers['Server'] == nil then
