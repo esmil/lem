@@ -39,12 +39,16 @@ local Request = {}
 Request.__index = Request
 M.Request = Request
 
-function Request:body()
+function Request:body(maxsize)
 	local len, body = self.headers['content-length'], ''
 	if not len then return body end
 
 	len = tonumber(len)
 	if len <= 0 then return body end
+
+	if maxsize and len > maxsize then
+		return nil, 'oversized'
+	end
 
 	if self.headers['expect'] == '100-continue' then
 		local ok, err = self.client:write('HTTP/1.1 100 Continue\r\n\r\n')
